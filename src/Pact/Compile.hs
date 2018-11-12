@@ -72,7 +72,7 @@ initParseState e = ParseState e $ CompileState 0 Nothing
 
 reserved :: [Text]
 reserved =
-  T.words "use module defun defpact step step-with-rollback true false let let* defconst interface implements"
+  T.words "use module defn step step-with-rollback true false let let* defconst interface implements"
 
 compile :: MkInfo -> Exp Parsed -> Either PactError (Term Name)
 compile mi e = let ei = mi <$> e in runCompile term (initParseState ei) ei
@@ -127,7 +127,7 @@ specialForm = bareAtom >>= \AtomExp{..} -> case _atomAtom of
     "bless" -> commit >> bless
     "deftable" -> commit >> deftable
     "defschema" -> commit >> defschema
-    "defun" -> commit >> defun
+    "defn" -> commit >> defun
     "defpact" -> commit >> defpact
     "module" -> commit >> moduleForm
     "interface" -> commit >> interface
@@ -184,7 +184,7 @@ objectLiteral :: Compile (Term Name)
 objectLiteral = withList Braces $ \ListExp{..} -> do
   let pair = do
         key <- term
-        val <- sep Colon *> term
+        val <- term
         return (key,val)
   ps <- pair `sepBy` sep Comma
   return $ TObject ps TyAny _listInfo
@@ -253,7 +253,7 @@ defun :: Compile (Term Name)
 defun = do
   modName <- currentModule'
   (defname,returnTy) <- first _atomAtom <$> typedAtom
-  args <- withList' Parens $ many arg
+  args <- withList' Brackets $ many arg --[]
   m <- meta ModelAllowed
   TDef defname modName Defun (FunType args returnTy)
     <$> abstractBody args <*> pure m <*> contextInfo
@@ -367,8 +367,8 @@ stepWithRollback = do
 
 
 letBindings :: Compile [(Arg (Term Name),Term Name)]
-letBindings = withList' Parens $
-              some $ withList' Parens $
+letBindings = withList' Brackets $ -- []
+              some $
               (,) <$> arg <*> term
 
 abstractBody :: [Arg (Term Name)] -> Compile (Scope Int Term Name)

@@ -139,7 +139,7 @@ instance Show KeySetName where show (KeySetName s) = show s
 
 data DefType = Defun | Defpact deriving (Eq,Show)
 defTypeRep :: DefType -> String
-defTypeRep Defun = "defun"
+defTypeRep Defun = "defn"
 defTypeRep Defpact = "defpact"
 
 newtype NativeDefName = NativeDefName Text
