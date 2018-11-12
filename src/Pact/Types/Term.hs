@@ -137,10 +137,10 @@ newtype KeySetName = KeySetName Text
 instance Show KeySetName where show (KeySetName s) = show s
 
 
-data DefType = Defun | Defpact deriving (Eq,Show)
+data DefType = Defun deriving (Eq,Show)
 defTypeRep :: DefType -> String
 defTypeRep Defun = "defn"
-defTypeRep Defpact = "defpact"
+-- defTypeRep Defpact = "defpact"
 
 newtype NativeDefName = NativeDefName Text
     deriving (Eq,Ord,IsString,ToJSON,AsString)

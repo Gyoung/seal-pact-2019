@@ -128,7 +128,7 @@ specialForm = bareAtom >>= \AtomExp{..} -> case _atomAtom of
     "deftable" -> commit >> deftable
     "defschema" -> commit >> defschema
     "defn" -> commit >> defun
-    "defpact" -> commit >> defpact
+    -- "defpact" -> commit >> defpact
     "module" -> commit >> moduleForm
     "interface" -> commit >> interface
     "implements" -> commit >> implements
@@ -258,18 +258,18 @@ defun = do
   TDef defname modName Defun (FunType args returnTy)
     <$> abstractBody args <*> pure m <*> contextInfo
 
-defpact :: Compile (Term Name)
-defpact = do
-  modName <- currentModule'
-  (defname,returnTy) <- first _atomAtom <$> typedAtom
-  args <- withList' Parens $ many arg
-  m <- meta ModelAllowed
-  (body,bi) <- bodyForm'
-  forM_ body $ \t -> case t of
-    TStep {} -> return ()
-    _ -> expected "step or step-with-rollback"
-  TDef defname modName Defpact (FunType args returnTy)
-    (abstractBody' args (TList body TyAny bi)) m <$> contextInfo
+-- defpact :: Compile (Term Name)
+-- defpact = do
+--   modName <- currentModule'
+--   (defname,returnTy) <- first _atomAtom <$> typedAtom
+--   args <- withList' Parens $ many arg
+--   m <- meta ModelAllowed
+--   (body,bi) <- bodyForm'
+--   forM_ body $ \t -> case t of
+--     TStep {} -> return ()
+--     _ -> expected "step or step-with-rollback"
+--   TDef defname modName Defpact (FunType args returnTy)
+--     (abstractBody' args (TList body TyAny bi)) m <$> contextInfo
 
 moduleForm :: Compile (Term Name)
 moduleForm = do
