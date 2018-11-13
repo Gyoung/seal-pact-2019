@@ -121,7 +121,7 @@ specialForm = bareAtom >>= \AtomExp{..} -> case _atomAtom of
     "use" -> commit >> useForm
     "let" -> commit >> letsForm
     "let*" -> commit >> letsForm
-    "defconst" -> commit >> defconst
+    "def" -> commit >> defconst
     "step" -> commit >> step
     "step-with-rollback" -> commit >> stepWithRollback
     "bless" -> commit >> bless
@@ -336,8 +336,8 @@ interfaceForm = (,) <$> some interfaceForms <*> contextInfo
     interfaceForms = withList' Parens $ do
       AtomExp{..} <- bareAtom
       case _atomAtom of
-        "defun" -> commit >> emptyDef
-        "defconst" -> commit >> defconst
+        "defn" -> commit >> emptyDef
+        "def" -> commit >> defconst
         "use" -> commit >> useForm
         t -> syntaxError $ "Invalid interface declaration: " ++ unpack t
 

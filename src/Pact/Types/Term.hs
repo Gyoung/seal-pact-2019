@@ -579,7 +579,7 @@ typeof t = case t of
       TModule {} -> Left "module"
       TList {..} -> Right $ TyList _tListType
       TDef {..} -> Left $ pack $ defTypeRep _tDefType
-      TNative {..} -> Left "defun"
+      TNative {..} -> Left "def"
       TConst {..} -> Left $ "const:" <> _aName _tConstArg
       TApp {..} -> Left "app"
       TVar {..} -> Left "var"
