@@ -640,9 +640,9 @@ abbrev (TModule m _ _) =
     Module{..} -> "<module " ++ asString' _mName ++ ">"
     Interface{..} -> "<interface " ++ asString' _interfaceName ++ ">"
 abbrev (TList bs tl _) = "<list(" ++ show (length bs) ++ ")" ++ showParamType tl ++ ">"
-abbrev TDef {..} = "<defun " ++ unpack _tDefName ++ ">"
+abbrev TDef {..} = "<defn " ++ unpack _tDefName ++ ">"
 abbrev TNative {..} = "<native " ++ asString' _tNativeName ++ ">"
-abbrev TConst {..} = "<defconst " ++ show _tConstArg ++ ">"
+abbrev TConst {..} = "<def " ++ show _tConstArg ++ ">"
 abbrev t@TApp {} = "<app " ++ abbrev (_tAppFun t) ++ ">"
 abbrev TBinding {} = "<binding>"
 abbrev TObject {..} = "<object" ++ showParamType _tObjectType ++ ">"
@@ -653,7 +653,7 @@ abbrev TBless {} = "<bless ...>"
 abbrev (TVar s _) = show s
 abbrev (TValue v _) = show v
 abbrev TStep {} = "<step>"
-abbrev TSchema {..} = "<defschema " ++ asString' _tSchemaName ++ ">"
+abbrev TSchema {..} = "<defrecord " ++ asString' _tSchemaName ++ ">"
 abbrev TTable {..} = "<deftable " ++ asString' _tTableName ++ ">"
 abbrev TImplements{..} = "<implements " ++ show _tInterfaceName ++ ">"
 

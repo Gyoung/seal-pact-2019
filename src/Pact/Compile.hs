@@ -126,7 +126,7 @@ specialForm = bareAtom >>= \AtomExp{..} -> case _atomAtom of
     "step-with-rollback" -> commit >> stepWithRollback
     "bless" -> commit >> bless
     "deftable" -> commit >> deftable
-    "defschema" -> commit >> defschema
+    "defrecord" -> commit >> defschema
     "defn" -> commit >> defun
     -- "defpact" -> commit >> defpact
     "module" -> commit >> moduleForm
