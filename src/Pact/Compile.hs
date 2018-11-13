@@ -412,7 +412,7 @@ hash' = str >>= \s -> case fromText' s of
   Left e -> syntaxError $ "bad hash: " ++ e
 
 typedAtom :: Compile (AtomExp Info,Type (Term Name))
-typedAtom = (,) <$> userAtom <*> (typed <|> freshTyVar)
+typedAtom = flip (,) <$> (typed <|> freshTyVar) <*> userAtom
 
 arg :: Compile (Arg (Term Name))
 arg = typedAtom >>= \(AtomExp{..},ty) ->
@@ -423,7 +423,7 @@ arg2Name Arg{..} = Name _aName _aInfo
 
 
 typed :: Compile (Type (Term Name))
-typed = sep Colon *> parseType
+typed = sep SCaret *> parseType
 
 parseType :: Compile (Type (Term Name))
 parseType = msum

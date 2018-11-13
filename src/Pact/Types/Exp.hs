@@ -111,12 +111,13 @@ listDelims Braces = ("{","}")
 enlist :: ListDelimiter -> ((Text,Text) -> a) -> a
 enlist d f = f (listDelims d)
 
-data Separator = Colon|ColonEquals|Comma deriving (Eq,Ord,Generic,Bounded,Enum)
+data Separator = Colon|ColonEquals|Comma|SCaret deriving (Eq,Ord,Generic,Bounded,Enum)
 instance NFData Separator
 instance Show Separator where
   show Colon = ":"
   show ColonEquals = ":="
   show Comma = ","
+  show SCaret = "^"
 
 
 data LiteralExp i = LiteralExp
