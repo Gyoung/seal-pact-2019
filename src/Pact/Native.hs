@@ -82,9 +82,9 @@ moduleToMap = M.fromList . map (((`Name` def) . asString) *** Direct) . snd
 
 
 lengthDef :: NativeDef
-lengthDef = defRNative "length" length' (funType tTyInteger [("x",listA)])
+lengthDef = defRNative "count" count' (funType tTyInteger [("x",listA)])
  "Compute length of X, which can be a list, a string, or an object.\
- \`(length [1 2 3])` `(length \"abcdefgh\")` `(length { \"a\": 1, \"b\": 2 })`"
+ \`(count [1 2 3])` `(count \"abcdefgh\")` `(count { \"a\": 1, \"b\": 2 })`"
 
 listA :: Type n
 listA = mkTyVar "a" [TyList (mkTyVar "l" []),TyPrim TyString,TySchema TyObject (mkSchemaVar "o")]
@@ -209,10 +209,10 @@ langDefs =
      "Apply APP to each element in LIST, returning a new list of results. \
      \`(map (+ 1) [1 2 3])`"
 
-    ,defNative "fold" fold'
+    ,defNative "reduce" reduce'
      (funType a [("app",lam2 a b a),("init",a),("list",TyList b)])
      "Iteratively reduce LIST by applying APP to last result and element, starting with INIT. \
-     \`(fold (+) 0 [100 10 5])`"
+     \`(reduce (+) 0 [100 10 5])`"
 
     ,defRNative "list" list
      (funType (TyList TyAny) [("elems",TyAny)])
@@ -227,7 +227,7 @@ langDefs =
     ,defNative "filter" filter'
      (funType (TyList a) [("app",lam a tTyBool),("list",TyList a)])
      "Filter LIST by applying APP to each element. For each true result, the original value is kept.\
-     \`(filter (compose (length) (< 2)) [\"my\" \"dog\" \"has\" \"fleas\"])`"
+     \`(filter (comp (count) (< 2)) [\"my\" \"dog\" \"has\" \"fleas\"])`"
 
     ,defRNative "sort" sort'
      (funType (TyList a) [("values",TyList a)] <>
@@ -240,9 +240,9 @@ langDefs =
      "Utility for use in 'filter' and 'select' applying APP to FIELD in VALUE. \
      \`(filter (where 'age (> 20)) [{'name: \"Mary\",'age: 30} {'name: \"Juan\",'age: 15}])`"
 
-     ,defNative "compose" compose (funType c [("x",lam a b),("y", lam b c),("value",a)])
+     ,defNative "comp" comp (funType c [("x",lam a b),("y", lam b c),("value",a)])
      "Compose X and Y, such that X operates on VALUE, and Y on the results of X. \
-     \`(filter (compose (length) (< 2)) [\"my\" \"dog\" \"has\" \"fleas\"])`"
+     \`(filter (comp (count) (< 2)) [\"my\" \"dog\" \"has\" \"fleas\"])`"
 
      ,lengthDef
 
@@ -257,10 +257,10 @@ langDefs =
     ,defRNative "remove" remove (funType (tTyObject (mkSchemaVar "o")) [("key",tTyString),("object",tTyObject (mkSchemaVar "o"))])
      "Remove entry for KEY from OBJECT. `(remove \"bar\" { \"foo\": 1, \"bar\": 2 })`"
 
-    ,defRNative "at" at' (funType a [("idx",tTyInteger),("list",TyList (mkTyVar "l" []))] <>
+    ,defRNative "get" get' (funType a [("idx",tTyInteger),("list",TyList (mkTyVar "l" []))] <>
                           funType a [("idx",tTyString),("object",tTyObject (mkSchemaVar "o"))])
      "Index LIST at IDX, or get value with key IDX from OBJECT. \
-     \`(at 1 [1 2 3])` `(at \"bar\" { \"foo\": 1, \"bar\": 2 })`"
+     \`(get [1 2 3] 1)` `(get { \"foo\": 1, \"bar\": 2 } \"bar\")`"
 
     ,enforceDef
     ,enforceOneDef
@@ -286,8 +286,8 @@ langDefs =
      (funType a [("src",tTyObject row),("binding",TySchema TyBinding row)])
      "Special form evaluates SRC to an object which is bound to with BINDINGS over subsequent body statements. \
      \`(bind { \"a\": 1, \"b\": 2 } { \"a\" := a-value } a-value)`"
-    ,defRNative "typeof" typeof'' (funType tTyString [("x",a)])
-     "Returns type of X as string. `(typeof \"hello\")`"
+    ,defRNative "type" typeof'' (funType tTyString [("x",a)])
+     "Returns type of X as string. `(type \"hello\")`"
     ,setTopLevelOnly $ defRNative "list-modules" listModules
      (funType (TyList tTyString) []) "List modules available for loading."
     ,defRNative "yield" yield (funType yieldv [("OBJECT",yieldv)])
@@ -363,12 +363,12 @@ reverse' :: RNativeFun e
 reverse' _ [l@TList{}] = return $ over tList reverse l
 reverse' i as = argsError i as
 
-fold' :: NativeFun e
-fold' i as@[app@TApp {},initv,l] = gasUnreduced i as $ reduce l >>= \l' -> case l' of
+reduce' :: NativeFun e
+reduce' i as@[app@TApp {},initv,l] = gasUnreduced i as $ reduce l >>= \l' -> case l' of
            TList ls _ _ -> reduce initv >>= \initv' ->
                          foldM (\r a' -> apply' app [r,a']) initv' ls
            t -> evalError' i $ "fold: expecting list: " ++ abbrev t
-fold' i as = argsError' i as
+reduce' i as = argsError' i as
 
 
 filter' :: NativeFun e
@@ -382,11 +382,11 @@ filter' i as@[app@TApp {},l] = gasUnreduced i as $ reduce l >>= \l' -> case l' o
            t -> evalError' i $ "filter: expecting list: " ++ abbrev t
 filter' i as = argsError' i as
 
-length' :: RNativeFun e
-length' _ [TList ls _ _] = return $ toTerm (length ls)
-length' _ [TLitString s] = return $ toTerm (T.length s)
-length' _ [TObject ps _ _] = return $ toTerm (length ps)
-length' i as = argsError i as
+count' :: RNativeFun e
+count' _ [TList ls _ _] = return $ toTerm (length ls)
+count' _ [TLitString s] = return $ toTerm (T.length s)
+count' _ [TObject ps _ _] = return $ toTerm (length ps)
+count' i as = argsError i as
 
 take' :: RNativeFun e
 take' _ [TLitInteger c,TList l t _] = return $ TList (tord take c l) t def
@@ -407,29 +407,29 @@ tord :: (Int -> [a] -> [a]) -> Integer -> [a] -> [a]
 tord f c l | c >= 0 = f (fromIntegral c) l
            | otherwise = reverse $ f (fromIntegral (negate c)) (reverse l)
 
-at' :: RNativeFun e
-at' _ [li@(TLitInteger idx),TList ls _ _] =
+get' :: RNativeFun e
+get' _ [TList ls _ _,li@(TLitInteger idx)] =
     case ls `atMay` fromIntegral idx of
       Just t -> return t
-      Nothing -> evalError (_tInfo li) $ "at: bad index " ++ show idx ++ ", length " ++ show (length ls)
-at' _ [idx,TObject ls _ _] = lookupObj idx ls
-at' i as = argsError i as
+      Nothing -> evalError (_tInfo li) $ "get: bad index " ++ show idx ++ ", length " ++ show (length ls)
+get' _ [TObject ls _ _,idx] = lookupObj idx ls
+get' i as = argsError i as
 
 lookupObj :: (Eq n, Show n) => Term n -> [(Term n, Term n)] -> Eval m (Term n)
 lookupObj idx ls = case lookup (unsetInfo idx) (map (first unsetInfo) ls) of
   Just v -> return v
-  Nothing -> evalError (_tInfo idx) $ "at: key not found: " ++ show idx
+  Nothing -> evalError (_tInfo idx) $ "get: key not found: " ++ show idx
 
 remove :: RNativeFun e
 remove _ [key,TObject ps t _] = return $ TObject (filter (\(k,_) -> unsetInfo key /= unsetInfo k) ps) t def
 remove i as = argsError i as
 
-compose :: NativeFun e
-compose i as@[appA@TApp {},appB@TApp {},v] = gasUnreduced i as $ do
+comp :: NativeFun e
+comp i as@[appA@TApp {},appB@TApp {},v] = gasUnreduced i as $ do
   v' <- reduce v
   a' <- apply' appA [v']
   apply' appB [a']
-compose i as = argsError' i as
+comp i as = argsError' i as
 
 
 
@@ -577,6 +577,7 @@ enforceVersion i as = case as of
             "Invalid pact version " ++ show pactVersion ++ ", " ++ msg ++ " allowed: " ++ show fullV
           return (mv' `succCmp` pv')
 
+-- FIXME contains?
 contains :: RNativeFun e
 contains _i [val,TList {..}] = return $ toTerm $ searchTermList val _tList
 contains _i [k,TObject {..}] = return $ toTerm $ foldl search False _tObject
