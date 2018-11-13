@@ -119,7 +119,7 @@ userAtom = do
 specialForm :: Compile (Term Name)
 specialForm = bareAtom >>= \AtomExp{..} -> case _atomAtom of
     "use" -> commit >> useForm
-    "let" -> commit >> letForm
+    "let" -> commit >> letsForm
     "let*" -> commit >> letsForm
     "defconst" -> commit >> defconst
     "step" -> commit >> step
@@ -379,11 +379,11 @@ abstractBody' args = abstract (`elemIndex` bNames)
   where bNames = map arg2Name args
 
 
-letForm :: Compile (Term Name)
-letForm = do
-  bindings <- letBindings
-  TBinding bindings <$> abstractBody (map fst bindings) <*>
-    pure BindLet <*> contextInfo
+-- letForm :: Compile (Term Name)
+-- letForm = do
+--   bindings <- letBindings
+--   TBinding bindings <$> abstractBody (map fst bindings) <*>
+--     pure BindLet <*> contextInfo
 
 -- | let* is a macro to nest lets for referencing previous
 -- bindings.
