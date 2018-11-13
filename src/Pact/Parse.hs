@@ -50,7 +50,6 @@ expr = do
       separator t s = symbol t >> (ESeparator . SeparatorExp s <$> inf)
   msum
     [ TF.try (ELiteral <$> (LiteralExp <$> token number <*> inf)) <?> "number"
-    , separator "^" SCaret
     , ELiteral <$> (LiteralExp . LString <$> stringLiteral <*> inf) <?> "string"
     , ELiteral <$> (LiteralExp . LString <$> (symbolic '\'' >> ident style) <*> inf) <?> "symbol"
     , ELiteral <$> (LiteralExp <$> bool <*> inf) <?> "bool"
@@ -60,7 +59,8 @@ expr = do
     , EList <$> (ListExp <$> brackets (many expr) <*> pure Brackets <*> inf) <?> "{list}"
     , separator ":=" ColonEquals
     , separator ":" Colon
-    , separator "," Comma   
+    , separator "," Comma
+    , separator "^" SCaret 
     ]
 {-# INLINE expr #-}
 
