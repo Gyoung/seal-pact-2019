@@ -152,8 +152,8 @@ eqDef = defRNative "=" (eq id) eqTy
   "True if X equals Y. `(= [1 2 3] [1 2 3])` `(= 'foo \"foo\")` `(= { 1: 2 } { 1: 2})`"
 
 neqDef :: NativeDef
-neqDef = defRNative "!=" (eq not) eqTy
-  "True if X does not equal Y. `(!= \"hello\" \"goodbye\")`"
+neqDef = defRNative "not=" (eq not) eqTy
+  "True if X does not equal Y. `(not= \"hello\" \"goodbye\")`"
 
 eqTy :: FunTypes n
 eqTy = binTy tTyBool eqA eqA
