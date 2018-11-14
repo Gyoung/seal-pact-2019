@@ -81,7 +81,7 @@
   (defn transfer-from [from to amount]
     ;; FIXME need msg.sender to change allowed
     ;; decrease allowed.from.msgsender by amount
-    (transfer from to amount)))
+    (_transfer from to amount)))
 
 ;define table
 (create-table total-supply)
