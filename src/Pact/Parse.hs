@@ -52,6 +52,7 @@ expr = do
     [ TF.try (ELiteral <$> (LiteralExp <$> token number <*> inf)) <?> "number"
     , ELiteral <$> (LiteralExp . LString <$> stringLiteral <*> inf) <?> "string"
     , ELiteral <$> (LiteralExp . LString <$> (symbolic '\'' >> ident style) <*> inf) <?> "symbol"
+    , ELiteral <$> (LiteralExp . LKeyword <$> (char ':' >> ident style) <*> inf) <?> "keyword"
     , ELiteral <$> (LiteralExp <$> bool <*> inf) <?> "bool"
     , (qualifiedAtom >>= \(a,qs) -> EAtom . AtomExp a qs <$> inf) <?> "atom"
     , EList <$> (ListExp <$> parens (many expr) <*> pure Parens <*> inf) <?> "(list)"

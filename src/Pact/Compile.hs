@@ -151,6 +151,7 @@ bindingForm = do
   let pair = do
         a <-  arg
         col <- term
+        -- a <- sep ColonEquals *> arg
         return (a,col)
   (bindings,bi) <- withList' Braces $
     (,) <$> pair `sepBy1` sep Comma <*> contextInfo

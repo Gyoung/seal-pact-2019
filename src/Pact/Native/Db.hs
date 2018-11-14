@@ -337,7 +337,7 @@ write _ i as = argsError i as
 
 toColumns :: FunApp -> [(Term Name,Term Name)] -> Eval e (Columns Persistable)
 toColumns i = fmap (Columns . M.fromList) . mapM conv where
-    conv (TLitString k, v) = return (ColumnId k,toPersistable v)
+    conv (TLitKeyword k, v) = return (ColumnId k,toPersistable v)
     conv (k,_) = evalError' i $ "Only string keys are supported for database writes: " ++ show (k, typeof' k)
 
 

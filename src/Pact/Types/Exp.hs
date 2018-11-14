@@ -60,7 +60,8 @@ data Literal =
     LInteger { _lInteger :: !Integer } |
     LDecimal { _lDecimal :: !Decimal } |
     LBool { _lBool :: !Bool } |
-    LTime { _lTime :: !UTCTime }
+    LTime { _lTime :: !UTCTime } |
+    LKeyword { _lKeyword :: !Text }
           deriving (Eq,Generic,Ord)
 
 
@@ -84,12 +85,15 @@ instance Show Literal where
     show (LDecimal r) = show r
     show (LBool b) = map toLower $ show b
     show (LTime t) = show $ formatLTime t
+    show (LKeyword k) = ":" ++ show k
+
 instance ToJSON Literal where
     toJSON (LString s) = String s
     toJSON (LInteger i) = Number (scientific i 0)
     toJSON (LDecimal r) = toJSON (show r)
     toJSON (LBool b) = toJSON b
     toJSON (LTime t) = toJSON (formatLTime t)
+    toJSON (LKeyword s) = String s
     {-# INLINE toJSON #-}
 
 
@@ -99,6 +103,7 @@ litToPrim LInteger {} = TyInteger
 litToPrim LDecimal {} = TyDecimal
 litToPrim LBool {} = TyBool
 litToPrim LTime {} = TyTime
+litToPrim LKeyword {} = TyString
 
 data ListDelimiter = Parens|Brackets|Braces deriving (Eq,Show,Ord,Generic,Bounded,Enum)
 instance NFData ListDelimiter

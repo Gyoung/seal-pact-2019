@@ -49,7 +49,7 @@ module Pact.Types.Term
    ToTerm(..),
    toTermList,toTObject,toTList,
    typeof,typeof',
-   pattern TLitString,pattern TLitInteger,pattern TLitBool,
+   pattern TLitString,pattern TLitInteger,pattern TLitBool, pattern TLitKeyword,
    tLit,tStr,termEq,abbrev,
    Gas(..)
    ) where
@@ -607,7 +607,8 @@ pattern TLitInteger :: Integer -> Term t
 pattern TLitInteger i <- TLiteral (LInteger i) _
 pattern TLitBool :: Bool -> Term t
 pattern TLitBool b <- TLiteral (LBool b) _
-
+pattern TLitKeyword :: Text -> Term t
+pattern TLitKeyword s <- TLiteral (LKeyword s) _
 
 tLit :: Literal -> Term n
 tLit = (`TLiteral` def)

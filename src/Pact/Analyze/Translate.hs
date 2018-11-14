@@ -595,6 +595,7 @@ translateNode astNode = withAstContext astNode $ case astNode of
     LString s  -> pure $ ESimple TStr (lit $ T.unpack s)
     LDecimal d -> pure $ ESimple TDecimal (lit (fromPact decimalIso d))
     LTime t    -> pure $ ESimple TTime (lit (fromPact timeIso t))
+    LKeyword s  -> pure $ ESimple TStr (lit $ T.unpack s) --todo
 
   AST_NegativeVar node -> do
     Just (Munged name, vid) <- view $ teNodeVars.at node

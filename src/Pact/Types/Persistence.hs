@@ -149,6 +149,7 @@ instance ToTerm Persistable where
     toTerm (PValue v) = toTerm v
 instance ToJSON Persistable where
     toJSON (PLiteral (LString s)) = String s
+    toJSON (PLiteral (LKeyword s)) = String s
     toJSON (PLiteral (LBool b)) = Bool b
     toJSON (PLiteral (LInteger n)) = encoder integerCodec n
     toJSON (PLiteral (LDecimal d)) = encoder decimalCodec d
