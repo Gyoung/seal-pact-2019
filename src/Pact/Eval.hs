@@ -590,6 +590,9 @@ checkUserType total i ps (TyUser tu@TSchema {..}) = do
     TLitString ks -> case M.lookup ks uty of
       Nothing -> evalError i $ "Invalid field for {" ++ unpack (asString _tSchemaName) ++ "}: " ++ show ks
       Just a -> return (a,v)
+    TLitKeyword ks -> case M.lookup ks uty of
+      Nothing -> evalError i $ "Invalid field for {" ++ unpack (asString _tSchemaName) ++ "}: " ++ show ks
+      Just a -> return (a,v)
     t -> evalError i $ "Invalid object, non-String key found: " ++ show t
   when total $ do
     let missing = M.difference uty (M.fromList (map (first _aName) aps))
