@@ -19,8 +19,8 @@
 (defcontract payments 'admin-keyset
 
   (defrecord payments
-    ^decimal balance
-    ^keyset keyset)
+    [^decimal balance
+    ^keyset keyset])
 
   (deftable payments-table ^{payments})
 

@@ -260,7 +260,7 @@ defschema = do
   modName <- currentModule'
   tn <- _atomAtom <$> userAtom
   m <- meta ModelAllowed
-  fields <- many arg
+  fields <- withList' Brackets $ many arg
   TSchema (TypeName tn) modName m fields <$> contextInfo
 
 defun :: Compile (Term Name)
