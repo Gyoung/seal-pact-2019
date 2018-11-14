@@ -117,7 +117,9 @@ userAtom = do
   pure a
 
 specialForm :: Compile (Term Name)
-specialForm = bareAtom >>= \AtomExp{..} -> case _atomAtom of
+specialForm = do
+  vatom <- bareAtom 
+  return vatom >>= \AtomExp{..} -> case _atomAtom of
     "use" -> commit >> useForm
     "let" -> commit >> letsForm
     "let*" -> commit >> letsForm
@@ -132,7 +134,18 @@ specialForm = bareAtom >>= \AtomExp{..} -> case _atomAtom of
     "module" -> commit >> moduleForm
     "interface" -> commit >> interface
     "implements" -> commit >> implements
+    "with-read" -> commit >> withRead (expToTerm vatom)
     _ -> expected "special form"
+
+expToTerm :: AtomExp Info -> Term Name
+expToTerm AtomExp{..} = TVar (Name _atomAtom _atomInfo) _atomInfo
+
+withRead :: Term Name -> Compile (Term Name)
+withRead v = do
+  tbl <- term
+  key <- term
+  bdn <- bindingForm
+  TApp v [tbl, key, bdn] <$> contextInfo
 
 
 app :: Compile (Term Name)
