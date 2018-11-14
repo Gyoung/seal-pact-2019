@@ -120,7 +120,7 @@ getModule i n = do
       rm <- HM.lookup n <$> view (eeRefStore.rsModules)
       case rm of
         Just ModuleData{..} -> return _mdModule
-        Nothing -> evalError i $ "Unable to resolve module " ++ show n
+        Nothing -> evalError i $ "Unable to resolve contract " ++ show n
 
 tTyInteger :: Type n; tTyInteger = TyPrim TyInteger
 tTyDecimal :: Type n; tTyDecimal = TyPrim TyDecimal

@@ -142,8 +142,8 @@ eval ::  Term Name ->  Eval e (Term Name)
 eval (TUse mn h i) = topLevelCall i "use" (GUse mn h) $ \g ->
   evalUse mn h i >> return (g,tStr $ pack $ "Using " ++ show mn)
 eval (TModule m@Module{..} bod i) =
-  topLevelCall i "module" (GModule m) $ \g0 -> do
-    -- enforce old module keysets
+  topLevelCall i "contract" (GModule m) $ \g0 -> do
+    -- enforce old contract keysets
     oldM <- readRow i Modules _mName
     case oldM of
       Nothing -> return ()
@@ -151,13 +151,13 @@ eval (TModule m@Module{..} bod i) =
         case om of
           Module{..} -> enforceKeySetName i _mKeySet
           Interface{..} -> evalError i $
-            "Name overlap: module " ++ show _mName ++ " overlaps with interface  " ++ show _interfaceName
-    -- enforce new module keyset
+            "Name overlap: contract " ++ show _mName ++ " overlaps with interface  " ++ show _interfaceName
+    -- enforce new contract keyset
     enforceKeySetName i _mKeySet
-    -- build/install module from defs
+    -- build/install contract from defs
     (g,_defs) <- loadModule m bod i g0
     writeRow i Write Modules _mName m
-    return (g, msg $ pack $ "Loaded module " ++ show _mName ++ ", hash " ++ show _mHash)
+    return (g, msg $ pack $ "Loaded contract " ++ show _mName ++ ", hash " ++ show _mHash)
 eval (TModule m@Interface{..} bod i) =
   topLevelCall i "interface" (GInterface m) $ \gas -> do
     oldI <- readRow i Modules _interfaceName
@@ -166,7 +166,7 @@ eval (TModule m@Interface{..} bod i) =
       Just oi ->
         case oi of
           Module{..} -> evalError i $
-            "Name overlap: interface " ++ show _interfaceName ++ " overlaps with module " ++ show _mName
+            "Name overlap: interface " ++ show _interfaceName ++ " overlaps with contract " ++ show _mName
           Interface{..} -> return ()
     (g, _) <- loadModule m bod i gas
     writeRow i Write Modules _interfaceName m
@@ -177,14 +177,14 @@ evalUse :: ModuleName -> Maybe Hash -> Info -> Eval e ()
 evalUse mn h i = do
   mm <- preview $ eeRefStore . rsModules . ix mn
   case mm of
-    Nothing -> evalError i $ "Module " ++ show mn ++ " not found"
+    Nothing -> evalError i $ "Contract " ++ show mn ++ " not found"
     Just md -> do
       case view mdModule md of
         Module{..} ->
           case h of
             Nothing -> return ()
             Just mh | mh == _mHash -> return ()
-                    | otherwise -> evalError i $ "Module " ++ show mn ++ " does not match specified hash: " ++
+                    | otherwise -> evalError i $ "Contract " ++ show mn ++ " does not match specified hash: " ++
                                show mh ++ ", " ++ show _mHash
         Interface{..} ->
           case h of
@@ -193,7 +193,7 @@ evalUse mn h i = do
 
       installModule md
 
--- | Make table of module definitions for storage in namespace/RefStore.
+-- | Make table of contract definitions for storage in namespace/RefStore.
 loadModule :: Module -> Scope n Term Name -> Info -> Gas -> Eval e (Gas,HM.HashMap Text (Term Name))
 loadModule m@Module{..} bod1 mi g0 = do
   (g1,modDefs1) <-
@@ -208,14 +208,14 @@ loadModule m@Module{..} bod1 mi g0 = do
                 TUse {..} -> evalUse _tModuleName _tModuleHash _tInfo >> return Nothing
                 TBless {..} -> return Nothing
                 TImplements {..} -> return $ Just (asString _tInterfaceName)
-                _ -> evalError (_tInfo t) "Invalid module member"
+                _ -> evalError (_tInfo t) "Invalid contract member"
               case dnm of
                 Nothing -> return (g, rs)
                 Just dn -> do
                   g' <- computeGas (Left (_tInfo t,dn)) (GModuleMember m)
                   return (g + g',(dn,t):rs)
         second HM.fromList <$> foldM doDef (g0,[]) bd
-      t -> evalError (_tInfo t) "Malformed module"
+      t -> evalError (_tInfo t) "Malformed contract"
   evaluatedDefs <- evaluateDefs mi modDefs1
   evaluateConstraints mi m evaluatedDefs
   let md = ModuleData m evaluatedDefs
@@ -247,7 +247,7 @@ loadModule i@Interface{..} body info gas0 = do
 
 -- | Definitions are transformed such that all free variables are resolved either to
 -- an existing ref in the refstore/namespace ('Right Ref'), or a symbol that must
--- resolve to a definition in the module ('Left String'). A graph is formed from
+-- resolve to a definition in the contract ('Left String'). A graph is formed from
 -- all 'Left String' entries and enforced as acyclic, proving the definitions
 -- to be non-recursive. The graph is walked to unify the Either to
 -- the 'Ref's it already found or a fresh 'Ref' that will have already been added to
@@ -277,21 +277,21 @@ traverseGraph defs = fmap stronglyConnCompR $ forM (HM.toList defs) $ \(dn,d) ->
       (Nothing, _) -> evalError (_nInfo f) $ "cannot resolve \"" ++ show f ++ "\""
   return (d', dn, mapMaybe (either Just (const Nothing)) $ toList d')
 
--- | Evaluate interface constraints in module.
+-- | Evaluate interface constraints in contract.
 evaluateConstraints
   :: Info
   -> Module
   -> HM.HashMap Text Ref
   -> Eval e ()
 evaluateConstraints info Interface{} _ =
-  evalError info $ "Unexpected: interface found in module position while solving constraints"
+  evalError info $ "Unexpected: interface found in contract position while solving constraints"
 evaluateConstraints info Module{..} evalMap = foldMap evaluateConstraint _mInterfaces
   where
     evaluateConstraint ifn = do
       irefs <- preview $ eeRefStore . rsModules . ix ifn . mdRefMap
       case irefs of
         Nothing -> evalError info $
-          "Interface implemented in module, but not defined: <" ++ asString' ifn ++ ">"
+          "Interface implemented in contract, but not defined: <" ++ asString' ifn ++ ">"
         Just irefs' -> HM.foldrWithKey (solveConstraint info evalMap) (pure ()) irefs'
 
 -- | Compare implemented member signatures with their definitions.
@@ -304,12 +304,12 @@ solveConstraint
   -> Eval e ()
   -> Eval e ()
 solveConstraint info _ refName (Direct t) _ =
-  evalError info $ "found native reference " ++ show t ++ " while resolving module contraints: " ++ show refName
+  evalError info $ "found native reference " ++ show t ++ " while resolving contract contraints: " ++ show refName
 solveConstraint info em refName (Ref t) _ =
   case HM.lookup refName em of
     Nothing -> pure ()
     Just (Direct s) ->
-      evalError info $ "found native reference " ++ show s ++ " while resolving module contraints: " ++ show t
+      evalError info $ "found native reference " ++ show s ++ " while resolving contract contraints: " ++ show t
     Just (Ref s) ->
       case (t, s) of
         (TDef _n _mn dt (FunType args rty) _ _ _,
@@ -430,11 +430,11 @@ reduceApp r _ ai = evalError ai $ "Expected def: " ++ show r
 reduceDirect :: Term Name -> [Term Ref] -> Info ->  Eval e (Term Name)
 reduceDirect TNative {..} as ai =
   let fa = FunApp ai (asString _tNativeName) Nothing Defun _tFunTypes (Just _tNativeDocs)
-      -- toplevel: only empty callstack or non-module-having callstack allowed
+      -- toplevel: only empty callstack or non-contract-having callstack allowed
       enforceTopLevel = traverse_ $ \c ->
         case preview (sfApp . _Just . _1 . faModule . _Just) c of
           Nothing -> return ()
-          Just m -> evalError ai $ "Top-level call used in module " ++ show m ++
+          Just m -> evalError ai $ "Top-level call used in contract " ++ show m ++
             ": " ++ show _tNativeName
   in do
     when _tNativeTopLevelOnly $ use evalCallStack >>= enforceTopLevel

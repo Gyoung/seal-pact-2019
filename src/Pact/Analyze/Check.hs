@@ -388,10 +388,10 @@ verifyFunctionProperty funName funInfo tables pactArgs body (Located propInfo ch
 
 moduleTables
   :: HM.HashMap ModuleName ModuleData -- ^ all loaded modules
-  -> ModuleData                       -- ^ the module we're verifying
+  -> ModuleData                       -- ^ the contract we're verifying
   -> ExceptT ParseFailure IO [Table]
 moduleTables modules ModuleData{..} = do
-  -- All tables defined in this module, and imported by it. We're going to look
+  -- All tables defined in this contract, and imported by it. We're going to look
   -- through these for their schemas, which we'll look through for invariants.
   let tables = flip mapMaybe (modules ^@.. traversed . mdRefMap . itraversed) $ \case
         (name, Ref (table@TTable {})) -> Just (name, table)
@@ -431,7 +431,7 @@ data ModuleProperty = ModuleProperty
   , _modulePropertyScope :: !PropertyScope
   }
 
--- Does this (module-scoped) property apply to this function?
+-- Does this (contract-scoped) property apply to this function?
 applicableCheck :: Text -> ModuleProperty -> Bool
 applicableCheck funName (ModuleProperty _ propScope) = case propScope of
   Everywhere      -> True
@@ -503,7 +503,7 @@ parseModuleModelDecl exps = traverse parseDecl exps where
       _ -> Left (exp, "malformed property definition")
     _ -> Left (exp, "expected a set of property / defproperty")
 
--- Get the set (HashMap) of refs to functions in this module.
+-- Get the set (HashMap) of refs to functions in this contract.
 moduleTypecheckableRefs :: ModuleData -> HM.HashMap Text Ref
 moduleTypecheckableRefs ModuleData{..} = flip HM.filter _mdRefMap $ \case
   Ref TDef{}   -> True
@@ -516,7 +516,7 @@ data ModelDecl = ModelDecl
   , _moduleProperties    :: ![ModuleProperty]
   }
 
--- Get the model defined in this module
+-- Get the model defined in this contract
 moduleModelDecl :: ModuleData -> Either ParseFailure ModelDecl
 moduleModelDecl ModuleData{..} = do
   lst <- parseModuleModelDecl model
@@ -652,12 +652,12 @@ liftEither = either throwError return
 -- invariants.
 verifyModule
   :: HM.HashMap ModuleName ModuleData   -- ^ all loaded modules
-  -> ModuleData                         -- ^ the module we're verifying
+  -> ModuleData                         -- ^ the contract we're verifying
   -> IO (Either VerificationFailure ModuleChecks)
 verifyModule modules moduleData = runExceptT $ do
   tables <- withExceptT ModuleParseFailure $ moduleTables modules moduleData
 
-  let -- HM.unions is biased towards the start of the list. This module should
+  let -- HM.unions is biased towards the start of the list. This contract should
       -- shadow the others. Note that load / shadow order of imported modules
       -- is undefined and in particular not the same as their import order.
       allModules = moduleData : HM.elems modules
@@ -739,7 +739,7 @@ verifyModule modules moduleData = runExceptT $ do
 
 -- | Verifies a one-off 'Check' for a function.
 verifyCheck
-  :: ModuleData     -- ^ the module we're verifying
+  :: ModuleData     -- ^ the contract we're verifying
   -> Text           -- ^ the name of the function
   -> Check          -- ^ the check we're running
   -> ExceptT VerificationFailure IO CheckResult

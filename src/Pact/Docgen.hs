@@ -78,7 +78,7 @@ renderTerm h TNative {..} = do
     _ -> hPutStrLn h (unpack _tNativeDocs) >> noexs
   when _tNativeTopLevelOnly $ do
     hPutStrLn h ""
-    hPutStrLn h "Top level only: this function will fail if used in module code."
+    hPutStrLn h "Top level only: this function will fail if used in contract code."
   hPutStrLn h ""
 renderTerm _ _ = return ()
 

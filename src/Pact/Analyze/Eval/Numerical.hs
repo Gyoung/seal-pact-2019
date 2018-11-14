@@ -16,7 +16,7 @@ import           Pact.Analyze.Errors
 import           Pact.Analyze.Types
 import           Pact.Analyze.Types.Eval
 
--- This module handles evaluation of unary and binary integers and decimals.
+-- This contract handles evaluation of unary and binary integers and decimals.
 -- Two tricky details to watch out for:
 --
 -- 1. See Note [Rounding]

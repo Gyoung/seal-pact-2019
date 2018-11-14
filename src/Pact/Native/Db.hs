@@ -123,16 +123,16 @@ dbDefs =
      \`$(describe-table accounts)`"
     ,setTopLevelOnly $ defRNative "describe-keyset" descKeySet
      (funType tTyValue [("keyset",tTyString)]) "Get metadata for KEYSET."
-    ,setTopLevelOnly $ defRNative "describe-module" descModule
-     (funType tTyValue [("module",tTyString)])
+    ,setTopLevelOnly $ defRNative "describe-contract" descModule
+     (funType tTyValue [("contract",tTyString)])
      "Get metadata for MODULE. Returns an object with 'name', 'hash', 'blessed', 'code', and 'keyset' fields. \
-     \`$(describe-module 'my-module)`"
+     \`$(describe-contract 'my-contract)`"
     ])
 
 descTable :: RNativeFun e
 descTable _ [TTable {..}] = return $ toTObject TyAny def [
   (tStr "name",tStr $ asString _tTableName),
-  (tStr "module", tStr $ asString _tModule),
+  (tStr "contract", tStr $ asString _tModule),
   (tStr "type", toTerm $ pack $ show _tTableType)]
 descTable i as = argsError i as
 
@@ -164,7 +164,7 @@ descModule i [TLitString t] = do
             [ (tStr "name", tStr $ asString _interfaceName)
             , (tStr "code", tStr $ asString _interfaceCode)
             ] TyAny def
-    Nothing -> evalError' i $ "Module not found: " ++ show t
+    Nothing -> evalError' i $ "Contract not found: " ++ show t
 descModule i as = argsError i as
 
 -- | unsafe function to create domain from TTable.
@@ -366,12 +366,12 @@ enforceBlessedHashes i mn h = do
   mmRs <- fmap _mdModule . HM.lookup mn <$> view (eeRefStore . rsModules)
   mm <- maybe (HM.lookup mn <$> use (evalRefs.rsLoadedModules)) (return.Just) mmRs
   case mm of
-    Nothing -> evalError' i $ "Internal error: Module " ++ show mn ++ " not found, could not enforce hashes"
+    Nothing -> evalError' i $ "Internal error: Contract " ++ show mn ++ " not found, could not enforce hashes"
     Just m ->
       case m of
         Module{..}
           | h == _mHash -> return () -- current version ok
           | h `HS.member` _mBlessed -> return () -- hash is blessed
           | otherwise -> evalError' i $
-            "Execution aborted, hash not blessed for module " ++ show mn ++ ": " ++ show h
-        _ -> evalError' i $ "Internal error: expected module reference " ++ show mn
+            "Execution aborted, hash not blessed for contract " ++ show mn ++ ": " ++ show h
+        _ -> evalError' i $ "Internal error: expected contract reference " ++ show mn

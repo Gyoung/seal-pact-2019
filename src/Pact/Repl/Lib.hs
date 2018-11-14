@@ -109,7 +109,7 @@ replDefs = ("Repl",
       "Clears any previous pact execution state. `$(env-entity \"my-org\")` `$(env-entity)`")
      ,defZRNative "begin-tx" (tx Begin) (funType tTyString [] <>
                                         funType tTyString [("name",tTyString)])
-       "Begin transaction with optional NAME. `$(begin-tx \"load module\")`"
+       "Begin transaction with optional NAME. `$(begin-tx \"load contract\")`"
      ,defZRNative "commit-tx" (tx Commit) (funType tTyString []) "Commit transaction. `$(commit-tx)`"
      ,defZRNative "rollback-tx" (tx Rollback) (funType tTyString []) "Rollback transaction. `$(rollback-tx)`"
      ,defZRNative "expect" expect (funType tTyString [("doc",tTyString),("expected",a),("actual",a)])
@@ -119,8 +119,8 @@ replDefs = ("Repl",
       "`(expect-failure \"Enforce fails on false\" (enforce false \"Expected error\"))`"
      ,defZNative "bench" bench' (funType tTyString [("exprs",TyAny)])
       "Benchmark execution of EXPRS. `$(bench (+ 1 2))`"
-     ,defZRNative "typecheck" tc (funType tTyString [("module",tTyString)] <>
-                                 funType tTyString [("module",tTyString),("debug",tTyBool)])
+     ,defZRNative "typecheck" tc (funType tTyString [("contract",tTyString)] <>
+                                 funType tTyString [("contract",tTyString),("debug",tTyBool)])
        "Typecheck MODULE, optionally enabling DEBUG output."
      ,defZRNative "env-gaslimit" setGasLimit (funType tTyString [("limit",tTyInteger)])
        "Set environment gas limit to LIMIT."
@@ -131,7 +131,7 @@ replDefs = ("Repl",
      ,defZRNative "env-gasrate" setGasRate (funType tTyString [("rate",tTyInteger)])
        "Update gas model to charge constant RATE."
 #if !defined(ghcjs_HOST_OS)
-     ,defZRNative "verify" verify (funType tTyString [("module",tTyString)]) "Verify MODULE, checking that all properties hold."
+     ,defZRNative "verify" verify (funType tTyString [("contract",tTyString)]) "Verify CONTRACT, checking that all properties hold."
 #endif
 
      ,defZRNative "json" json' (funType tTyValue [("exp",a)]) $
@@ -335,7 +335,7 @@ tc i as = case as of
     go modname dbg = do
       mdm <- HM.lookup (ModuleName modname) <$> view (eeRefStore . rsModules)
       case mdm of
-        Nothing -> evalError' i $ "No such module: " ++ show modname
+        Nothing -> evalError' i $ "No such contract: " ++ show modname
         Just md -> do
           r :: Either CheckerException ([TopLevel Node],[Failure]) <-
             try $ liftIO $ typecheckModule dbg md
@@ -354,7 +354,7 @@ verify i as = case as of
     modules <- view (eeRefStore . rsModules)
     let mdm = HM.lookup (ModuleName modName) modules
     case mdm of
-      Nothing -> evalError' i $ "No such module: " ++ show modName
+      Nothing -> evalError' i $ "No such contract: " ++ show modName
       Just md -> do
         modResult <- liftIO $ verifyModule modules md
         -- TODO: build describeModuleResult

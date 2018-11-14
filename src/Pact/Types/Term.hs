@@ -275,7 +275,7 @@ data Module
 
 instance Show Module where
   show m = case m of
-    Module{..} -> "(Module " ++ asString' _mName ++ " '" ++ asString' _mKeySet ++ " " ++ show _mHash ++ ")"
+    Module{..} -> "(Contract " ++ asString' _mName ++ " '" ++ asString' _mKeySet ++ " " ++ show _mHash ++ ")"
     Interface{..} -> "(Interface " ++ asString' _interfaceName ++ ")"
 
                      
@@ -296,7 +296,7 @@ instance ToJSON Module where
     ]
 
 instance FromJSON Module where
-  parseJSON = withObject "Module" $ \o -> Module
+  parseJSON = withObject "Contract" $ \o -> Module
     <$> o .: "name"
     <*> o .: "keyset"
     <*> pure (Meta Nothing []) {- o .:? "meta" -}
@@ -576,7 +576,7 @@ toTermList ty l = TList (map toTerm (toList l)) ty def
 typeof :: Term a -> Either Text (Type (Term a))
 typeof t = case t of
       TLiteral l _ -> Right $ TyPrim $ litToPrim l
-      TModule {} -> Left "module"
+      TModule {} -> Left "contract"
       TList {..} -> Right $ TyList _tListType
       TDef {..} -> Left $ pack $ defTypeRep _tDefType
       TNative {..} -> Left "def"
@@ -638,7 +638,7 @@ termEq _ _ = False
 abbrev :: Show t => Term t -> String
 abbrev (TModule m _ _) =
   case m of
-    Module{..} -> "<module " ++ asString' _mName ++ ">"
+    Module{..} -> "<contract " ++ asString' _mName ++ ">"
     Interface{..} -> "<interface " ++ asString' _interfaceName ++ ">"
 abbrev (TList bs tl _) = "<list(" ++ show (length bs) ++ ")" ++ showParamType tl ++ ">"
 abbrev TDef {..} = "<defn " ++ unpack _tDefName ++ ">"

@@ -11,12 +11,12 @@
 ;... and is signed by ADMIN key
 (env-keys ["ADMIN"])
 
-;define keyset to guard module
+;define keyset to guard contract
 (define-keyset 'admin-keyset (read-keyset "admin-keyset"))
 
 ;define smart-contract code
 (print "ss1")
-(module payments 'admin-keyset
+(defcontract payments 'admin-keyset
 
   (defrecord payments
     ^decimal balance

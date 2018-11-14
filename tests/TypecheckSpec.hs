@@ -73,7 +73,7 @@ loadModule fp mn = do
   either (die def) (const (return ())) r
   case view (rEnv . eeRefStore . rsModules . at mn) s of
     Just m -> return m
-    Nothing -> die def $ "Module not found: " ++ show (fp,mn)
+    Nothing -> die def $ "Contract not found: " ++ show (fp,mn)
 
 loadFun :: FilePath -> ModuleName -> Text -> IO Ref
 loadFun fp mn fn = loadModule fp mn >>= \(ModuleData _ m) -> case HM.lookup fn m of

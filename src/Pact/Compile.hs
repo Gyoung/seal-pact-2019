@@ -72,7 +72,7 @@ initParseState e = ParseState e $ CompileState 0 Nothing
 
 reserved :: [Text]
 reserved =
-  T.words "use module defn step step-with-rollback true false let let* defconst interface implements"
+  T.words "use defcontract defn step step-with-rollback true false let let* defconst interface implements"
 
 compile :: MkInfo -> Exp Parsed -> Either PactError (Term Name)
 compile mi e = let ei = mi <$> e in runCompile term (initParseState ei) ei
@@ -83,7 +83,7 @@ compileExps mi exps = sequence $ compile mi <$> exps
 currentModule :: Compile (ModuleName,Hash)
 currentModule = use (psUser . csModule) >>= \m -> case m of
   Just cm -> return cm
-  Nothing -> context >>= tokenErr' "Must be declared within module"
+  Nothing -> context >>= tokenErr' "Must be declared within contract"
 
 currentModule' :: Compile ModuleName
 currentModule' = fst <$> currentModule
@@ -131,7 +131,7 @@ specialForm = do
     "defrecord" -> commit >> defschema
     "defn" -> commit >> defun
     -- "defpact" -> commit >> defpact
-    "module" -> commit >> moduleForm
+    "defcontract" -> commit >> moduleForm
     "interface" -> commit >> interface
     "implements" -> commit >> implements
     "with-read" -> commit >> withRead (expToTerm vatom)
@@ -291,7 +291,7 @@ moduleForm = do
   keyset <- str
   m <- meta ModelAllowed
   use (psUser . csModule) >>= \cm -> case cm of
-    Just {} -> syntaxError "Invalid nested module or interface"
+    Just {} -> syntaxError "Invalid nested contract or interface"
     Nothing -> return ()
   i <- contextInfo
   let code = case i of
@@ -310,7 +310,7 @@ moduleForm = do
     TUse {} -> return []
     TBless {..} -> return [_tBlessed]
     TImplements{} -> return []
-    t -> syntaxError $ "Invalid declaration in module scope: " ++ abbrev t
+    t -> syntaxError $ "Invalid declaration in contract scope: " ++ abbrev t
   let interfaces = bd >>= \d -> case d of
         TImplements{..} -> [_tInterfaceName]
         _ -> []
@@ -330,7 +330,7 @@ interface = do
   iname' <- _atomAtom <$> bareAtom
   m <- meta ModelAllowed
   use (psUser . csModule) >>= \ci -> case ci of
-    Just {} -> syntaxError "invalid nested interface or module"
+    Just {} -> syntaxError "invalid nested interface or contract"
     Nothing -> return ()
   info <- contextInfo
   let code = case info of
@@ -486,9 +486,9 @@ _compile sfun (TF.Success (a,s)) = return $ forM a $ \e ->
   let ei = mkStringInfo s <$> e
   in runCompile term (sfun (initParseState ei)) ei
 
--- | run a string as though you were in a module (test deftable, etc)
+-- | run a string as though you were in a contract (test deftable, etc)
 _compileStrInModule :: String -> IO [Term Name]
-_compileStrInModule = _compileStr' (set (psUser . csModule) (Just ("mymodule",hash mempty)))
+_compileStrInModule = _compileStr' (set (psUser . csModule) (Just ("mycontract",hash mempty)))
 
 _compileStr :: String -> IO [Term Name]
 _compileStr = _compileStr' id
