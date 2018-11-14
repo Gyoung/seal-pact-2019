@@ -124,8 +124,8 @@ specialForm = do
     "let" -> commit >> letsForm
     "let*" -> commit >> letsForm
     "def" -> commit >> defconst
-    "step" -> commit >> step
-    "step-with-rollback" -> commit >> stepWithRollback
+    -- "step" -> commit >> step
+    -- "step-with-rollback" -> commit >> stepWithRollback
     "bless" -> commit >> bless
     "deftable" -> commit >> deftable
     "defrecord" -> commit >> defschema
@@ -367,16 +367,16 @@ emptyDef = do
     (FunType args returnTy) (abstract (const Nothing) (TList [] TyAny info)) m info
 
 
-step :: Compile (Term Name)
-step = do
-  cont <- try (TStep <$> (Just <$> term) <*> term) <|>
-          (TStep Nothing <$> term)
-  cont <$> pure Nothing <*> contextInfo
+-- step :: Compile (Term Name)
+-- step = do
+--   cont <- try (TStep <$> (Just <$> term) <*> term) <|>
+--           (TStep Nothing <$> term)
+--   cont <$> pure Nothing <*> contextInfo
 
-stepWithRollback :: Compile (Term Name)
-stepWithRollback = do
-  try (TStep <$> (Just <$> term) <*> term <*> (Just <$> term) <*> contextInfo) <|>
-      (TStep Nothing <$> term <*> (Just <$> term) <*> contextInfo)
+-- stepWithRollback :: Compile (Term Name)
+-- stepWithRollback = do
+--   try (TStep <$> (Just <$> term) <*> term <*> (Just <$> term) <*> contextInfo) <|>
+--       (TStep Nothing <$> term <*> (Just <$> term) <*> contextInfo)
 
 
 
