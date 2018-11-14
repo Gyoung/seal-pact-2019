@@ -1,0 +1,101 @@
+;;
+;; ERC20 contract model.
+;;
+
+;; setup environment with administrator and user keysets
+(env-data { "admin-keyset" { "keys" ["ADMIN"] },
+            "sarah-keyset" { "keys" ["SARAH"] },
+            "james-keyset" { "keys" ["JAMES"] }
+            } )
+;... and is signed by ADMIN key
+(env-keys ["ADMIN"])
+
+;define keyset to guard module
+(define-keyset 'admin-keyset (read-keyset "admin-keyset"))
+
+;define smart-contract code
+(defcontract erc20contract 'admin-keyset
+
+  ;; (def totalsupply [^decimal totalsupply])
+
+  (defrecord balances
+    [^decimal balance
+     ^keyset keyset])
+
+  (deftable balances-table ^{balances})
+
+  (defrecord allowance
+    [^decimal allowed
+    ^keyset owner
+    ^keyset spender])
+
+  (deftable allowance-table ^{allowance})
+
+  ;; (defn total-supply [] totalsupply) ;; for mintable
+  
+  (defn allowance [owner spender]
+    (with-read allowance-table
+               {:owner owner :spender spender}
+               { allowed :allowed }
+               allowed))
+
+  ;; FIXME private function
+  (defn _transfer [from to amount]
+    (with-read balances-table from { from-bal :balance , keyset :keyset }
+      (enforce-keyset keyset)
+      (with-read balances-table to { to-bal :balance }
+        (enforce (> amount 0.0) "Negative Transaction Amount")
+        (enforce (>= from-bal amount) "Insufficient Funds")
+        (update balances-table from
+                { :balance (- from-bal amount) })
+        (update balances-table to
+                { :balance (+ to-bal amount) })
+        (format "{} paid {} {}" [from to amount]))))
+  
+  (defn create-account [id initial-balance keyset]
+    "Create a new account for ID with INITIAL-BALANCE funds, must be administrator."
+    (enforce-keyset 'admin-keyset)
+    (enforce (>= initial-balance 0.0) "Initial balances must be >= 0.")
+    (insert balances-table id
+            { :balance initial-balance,
+            :keyset keyset }))
+
+  (defn balance-of [id]
+    "Only users or admin can read balance."
+    (with-read balances-table id
+      { balance :balance, keyset :keyset }
+      (enforce-one "Access denied"
+                   [(enforce-keyset keyset)
+                    (enforce-keyset 'admin-keyset)])
+      balance))
+
+  (defn transfer [to amount]
+    ;; FIXME need msg.sender
+    (_transfer msg.sender to value))
+
+  (defn approve [spender amount]
+    ;; FIXME need msg.sender
+    ;; set allowed.msgsender.spender to amount
+    )
+
+  (defn transfer-from [from to amount]
+    ;; FIXME need msg.sender to change allowed
+    ;; decrease allowed.from.msgsender by amount
+    (transfer from to amount)))
+
+;define table
+(create-table total-supply)
+(create-table balances-table)
+
+;create accounts
+(create-account "Sarah" 100.25 (read-keyset "sarah-keyset"))
+(create-account "James" 250.0 (read-keyset "james-keyset"))
+
+;; do payment, simluating SARAH keyset.
+(env-keys ["SARAH"])
+(transfer-from "Sarah" "James" 25.0)
+(format "Sarah's balance is {}" [(get-balance "Sarah")])
+
+;; read James' balance as JAMES
+(env-keys ["JAMES"])
+(format "James's balance is {}" [(get-balance "James")])
