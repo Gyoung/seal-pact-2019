@@ -25,25 +25,27 @@
     [^decimal balance
      ^keyset keyset])
 
+  ;; use owner as id
   (deftable balances-table ^{balances})
 
   (defrecord allowance
     [^decimal allowed
-    ^keyset owner
-    ^keyset spender])
+     ^keyset owner
+     ^keyset spender])
 
+  ;; use (hash [sender receiver]) as id
   (deftable allowance-table ^{allowance})
 
   ;; (defn total-supply [] totalsupply) ;; for mintable
+  (defn- get-hash [owner spender]
+    (hash [owner spender]))
   
   (defn allowance [owner spender]
-    ;; FIXME ID
     (with-read allowance-table
-               ID
+               (get-hash owner spender)
                { allowed :allowed }
                allowed))
 
-  ;; FIXME private function
   (defn- _transfer [from to amount]
     (with-read balances-table from { from-bal :balance , keyset :keyset }
       (enforce-keyset keyset)
@@ -62,8 +64,7 @@
     (enforce-keyset 'admin-keyset)
     (enforce (>= initial-balance 0.0) "Initial balances must be >= 0.")
     (insert balances-table id
-            { :balance initial-balance,
-            :keyset keyset }))
+            { :balance initial-balance :keyset keyset }))
 
   (defn balance-of [id]
     "Only users or admin can read balance."
@@ -75,23 +76,23 @@
       balance))
 
   (defn transfer [to amount]
-    ;; FIXME need msg.sender
-    (_transfer msg.sender spender value)
+    (_transfer msgsender spender value)
     true)
 
   (defn approve [spender amount]
-    ;; FIXME need msg.sender ID
-    ;; set allowed.msgsender.spender to amount
-    (update allowance-table ID { :allowed amount })
+    (update allowance-table
+            (get-hash msgsender spender)
+            { :allowed amount })
     (emit (approval-event msgsender spender amount))
     true)
 
   (defn transfer-from [from to amount]
-    ;; FIXME need msg.sender to change allowed
-    ;; decrease allowed.from.msgsender by amount
     (let [allowed (allowance from msgsender)
           new-amount (- allowed amount)]
-      (update allowance-talbe ID { :allowed new-amount })
+      (enforce (>= new-amount 0.0) "Negative Allowance Amount")
+      (update allowance-table
+              (get-hash from msgsender)
+              { :allowed new-amount })
       (_transfer from to amount)
       true)))
 
@@ -114,4 +115,13 @@
 
 ;; read James' balance as JAMES
 (env-keys ["JAMES"])
+(format "James's balance is {}" [(get-balance "James")])
+
+
+(env-keys ["ADMIN"])
+(approve "Sarah" 1000.0)
+(env-keys ["SARAH"])
+(transfer-from "Admin" "James" 100.0)
+(transfer-from "Admin" "James" 800.0)
+(transfer-from "Admin" "James" 800.0) ;; should fail
 (format "James's balance is {}" [(get-balance "James")])
