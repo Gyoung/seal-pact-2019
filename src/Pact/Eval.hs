@@ -240,10 +240,20 @@ loadModule i@Interface{..} body info gas0 = do
       second HM.fromList <$> foldM doDef (gas0,[]) bd
     t -> evalError (_tInfo t) "Malformed interface"
   evaluatedDefs <- evaluateDefs info idefs
-  let md = ModuleData i evaluatedDefs
+  let md = ModuleData i $ filterOutPrivateDefs idefs evaluatedDefs
   installModule md
   (evalRefs . rsNewModules) %= HM.insert _interfaceName md
   return (gas1, idefs)
+
+-- 过滤掉private函数
+filterOutPrivateDefs :: HM.HashMap Text (Term Name) -> HM.HashMap Text Ref -> HM.HashMap Text Ref
+filterOutPrivateDefs defs = HM.filterWithKey isNotPrivateDef
+  where
+    isNotPrivateDef dn _ = do
+      case HM.lookup dn defs of
+        Nothing -> False
+        Just (TDef Private _ _ _ _ _ _ _) -> False
+        _ -> True
 
 -- | Definitions are transformed such that all free variables are resolved either to
 -- an existing ref in the refstore/namespace ('Right Ref'), or a symbol that must
