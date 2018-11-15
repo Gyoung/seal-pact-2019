@@ -32,7 +32,7 @@
             { :balance initial-balance,
             :keyset keyset }))
 
-  (defn get-balance [id]
+  (defn- get-balance [id]
     "Only users or admin can read balance."
     (with-read payments-table id
       { balance :balance, keyset :keyset }

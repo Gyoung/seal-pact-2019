@@ -41,11 +41,12 @@ module Pact.Types.Term
    Name(..),
    ConstVal(..),
    Term(..),
+   DefVisibility(..),
    tAppArgs,tAppFun,tBindBody,tBindPairs,tBindType,tBlessed,tConstArg,tConstVal,
    tDefBody,tDefName,tDefType,tMeta,tFields,tFunTypes,tFunType,tHash,tInfo,tKeySet,
    tListType,tList,tLiteral,tModuleBody,tModuleDef,tModuleName,tModuleHash,tModule,
    tNativeDocs,tNativeFun,tNativeName,tNativeTopLevelOnly,tObjectType,tObject,tSchemaName,
-   tStepEntity,tStepExec,tStepRollback,tTableName,tTableType,tValue,tVar,tInterfaceName,
+   tStepEntity,tStepExec,tStepRollback,tTableName,tTableType,tValue,tVar,tInterfaceName,tVisibility,
    ToTerm(..),
    toTermList,toTObject,toTList,
    typeof,typeof',
@@ -320,6 +321,10 @@ instance Eq1 ConstVal where
   liftEq eq (CVEval a c) (CVEval b d) = eq a b && eq c d
   liftEq _ _ _ = False
 
+data DefVisibility = PUBLIC | PRIVATE
+     deriving (Eq, Show, Generic)
+
+
 -- | Pact evaluable term.
 data Term n =
     TModule {
@@ -333,7 +338,8 @@ data Term n =
     , _tInfo :: !Info
     } |
     TDef {
-      _tDefName :: !Text
+     _tVisibility :: !DefVisibility
+    , _tDefName :: !Text
     , _tModule :: !ModuleName
     , _tDefType :: !DefType
     , _tFunType :: !(FunType (Term n))
@@ -431,7 +437,7 @@ instance Show n => Show (Term n) where
     show (TList bs _ _) = "[" ++ unwords (map show bs) ++ "]"
     show TDef {..} =
       "(TDef " ++ defTypeRep _tDefType ++ " " ++ asString' _tModule ++ "." ++ unpack _tDefName ++ " " ++
-      show _tFunType ++ " " ++ show _tMeta ++ ")"
+      show _tFunType ++ " " ++ show _tMeta ++ " " ++ show _tVisibility ++ ")"
     show TNative {..} =
       "(TNative " ++ asString' _tNativeName ++ " " ++ showFunTypes _tFunTypes ++ " " ++ unpack _tNativeDocs ++ ")"
     show TConst {..} =
@@ -468,8 +474,8 @@ instance Eq1 Term where
     a == m && liftEq eq b n && c == o
   liftEq eq (TList a b c) (TList m n o) =
     liftEq (liftEq eq) a m && liftEq (liftEq eq) b n && c == o
-  liftEq eq (TDef a b c d e f g) (TDef m n o p q r s) =
-    a == m && b == n && c == o && liftEq (liftEq eq) d p && liftEq eq e q && f == r && g == s
+  liftEq eq (TDef h a b c d e f g) (TDef t m n o p q r s) =
+    h == t && a == m && b == n && c == o && liftEq (liftEq eq) d p && liftEq eq e q && f == r && g == s 
   liftEq eq (TConst a b c d e) (TConst m n o q r) =
     liftEq (liftEq eq) a m && b == n && liftEq (liftEq eq) c o && d == q && e == r
   liftEq eq (TApp a b c) (TApp m n o) =
@@ -509,7 +515,7 @@ instance Monad Term where
     return a = TVar a def
     TModule m b i >>= f = TModule m (b >>>= f) i
     TList bs t i >>= f = TList (map (>>= f) bs) (fmap (>>= f) t) i
-    TDef n m dt ft b d i >>= f = TDef n m dt (fmap (>>= f) ft) (b >>>= f) d i
+    TDef p n m dt ft b d i >>= f = TDef p n m dt (fmap (>>= f) ft) (b >>>= f) d i
     TNative n fn t d tl i >>= f = TNative n fn (fmap (fmap (>>= f)) t) d tl i
     TConst d m c t i >>= f = TConst (fmap (>>= f) d) m (fmap (>>= f) c) t i
     TApp af as i >>= f = TApp (af >>= f) (map (>>= f) as) i

@@ -129,7 +129,8 @@ specialForm = do
     "bless" -> commit >> bless
     "deftable" -> commit >> deftable
     "defrecord" -> commit >> defschema
-    "defn" -> commit >> defun
+    "defn" -> commit >> defun PUBLIC
+    "defn-" -> commit >> defun PRIVATE
     -- "defpact" -> commit >> defpact
     "defcontract" -> commit >> moduleForm
     "interface" -> commit >> interface
@@ -263,13 +264,13 @@ defschema = do
   fields <- withList' Brackets $ many arg
   TSchema (TypeName tn) modName m fields <$> contextInfo
 
-defun :: Compile (Term Name)
-defun = do
+defun :: DefVisibility -> Compile (Term Name)
+defun visibility = do
   modName <- currentModule'
   (defname,returnTy) <- first _atomAtom <$> typedAtom
   args <- withList' Brackets $ many arg --[]
   m <- meta ModelAllowed
-  TDef defname modName Defun (FunType args returnTy)
+  TDef visibility defname modName Defun (FunType args returnTy)
     <$> abstractBody args <*> pure m <*> contextInfo
 
 -- defpact :: Compile (Term Name)
@@ -363,7 +364,7 @@ emptyDef = do
   m <- meta ModelAllowed
   info <- contextInfo
   return $
-    TDef defName modName Defun
+    TDef PUBLIC defName modName Defun
     (FunType args returnTy) (abstract (const Nothing) (TList [] TyAny info)) m info
 
 

@@ -312,8 +312,8 @@ solveConstraint info em refName (Ref t) _ =
       evalError info $ "found native reference " ++ show s ++ " while resolving contract contraints: " ++ show t
     Just (Ref s) ->
       case (t, s) of
-        (TDef _n _mn dt (FunType args rty) _ _ _,
-          TDef _n' _mn' dt' (FunType args' rty') _ _ _) -> do
+        (TDef _ _n _mn dt (FunType args rty) _ _ _,
+          TDef _ _n' _mn' dt' (FunType args' rty') _ _ _) -> do
           when (dt /= dt') $ evalError info $ "deftypes mismatching: " ++ show dt ++ "\n" ++ show dt'
           when (rty /= rty') $ evalError info $ "return types mismatching: " ++ show rty ++ "\n" ++ show rty'
           when (length args /= length args') $ evalError info $ "mismatching argument lists: " ++ show args ++ "\n" ++ show args'
