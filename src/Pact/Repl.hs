@@ -63,7 +63,7 @@ repl' :: ReplMode -> IO (Either () (Term Name))
 repl' m = initReplState m >>= \s -> runPipedRepl' (m == Interactive) s stdin
 
 isPactFile :: String -> Bool
-isPactFile fp = endsWith fp ".pact"
+isPactFile fp = endsWith fp ".seal"
 
 endsWith :: Eq a => [a] -> [a] -> Bool
 endsWith v s = s == reverse (take (length s) (reverse v))
@@ -96,7 +96,7 @@ utf8BytesLength = length . toUTF8Bytes
 -- | Main loop for non-interactive (piped) input
 pipeLoop :: Bool -> Handle -> Maybe (Term Name) -> Repl (Either () (Term Name))
 pipeLoop prompt h lastResult = do
-  when prompt $ outStr HOut "pact> "
+  when prompt $ outStr HOut "seal> "
   isEof <- liftIO (hIsEOF h)
   let retVal = maybe rSuccess (return.Right) lastResult
   if isEof then retVal else do

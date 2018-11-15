@@ -87,7 +87,7 @@ setupServer configFile = do
   replayFromDisk' <- ReplayFromDisk <$> newEmptyMVar
   debugFn <- if _verbose then initFastLogger else return (return . const ())
   let cmdConfig = CommandConfig
-          (fmap (\pd -> SQLiteConfig (pd ++ "/pact.sqlite") _pragmas) _persistDir)
+          (fmap (\pd -> SQLiteConfig (pd ++ "/seal.sqlite") _pragmas) _persistDir)
           _entity
           _gasLimit
           _gasRate

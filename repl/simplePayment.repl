@@ -2,7 +2,6 @@
 ;; Simple accounts model.
 ;;
 
-(print "ss")
 ;; setup environment with administrator and user keysets
 (env-data { "admin-keyset" { "keys" ["ADMIN"] },
             "sarah-keyset" { "keys" ["SARAH"] },
@@ -15,7 +14,7 @@
 (define-keyset 'admin-keyset (read-keyset "admin-keyset"))
 
 ;define smart-contract code
-(print "ss1")
+
 (defcontract payments 'admin-keyset
 
   (defrecord payments
@@ -54,7 +53,7 @@
         (format "{} paid {} {}" [from to amount]))))    
 
 )
-(print "ss2")
+
 ;define table
 (create-table payments-table)
 
@@ -65,7 +64,7 @@
 
 ;; do payment, simluating SARAH keyset.
 (env-keys ["SARAH"])
-(print "ss3")
+
 (pay "Sarah" "James" 25.0)
 (format "Sarah's balance is {}" [(get-balance "Sarah")])
 

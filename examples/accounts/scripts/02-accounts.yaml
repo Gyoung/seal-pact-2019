@@ -4,7 +4,7 @@
 # $ pact -a examples/accounts/accounts.yaml | curl -d @- http://localhost:8080/api/v1/send
 
 
-codeFile: ../accounts.pact
+codeFile: ../accounts.seal
 data:
   accounts-admin-keyset: ["ba54b224d1924dd98403f5c751abdd10de6cd81b0121800bf7bdbdcfaec7388d"]
 keyPairs:

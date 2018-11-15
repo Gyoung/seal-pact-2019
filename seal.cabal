@@ -1,5 +1,5 @@
 
-name:                pact
+name:                seal
 version:             2.5.0
 synopsis:            Smart contract language library and REPL
 description:
@@ -178,11 +178,11 @@ library
   ghc-options:         -Wall -Werror -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
   ghc-prof-options:    -fprof-auto -fprof-auto-calls
 
-executable pact
+executable seal
   main-is:             Repl.hs
 
   build-depends:       base
-                     , pact
+                     , seal
   hs-source-dirs:      executables
   ghc-options:         -Wall -threaded -rtsopts -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
   ghc-prof-options:    -fprof-auto -fprof-auto-calls
@@ -194,7 +194,7 @@ executable pact
 executable bench
   main-is:             Bench.hs
   build-depends:       base
-                     , pact
+                     , seal
   hs-source-dirs:      executables
   ghc-options:         -Wall -threaded -rtsopts -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
   ghc-prof-options:    -fprof-auto -fprof-auto-calls
@@ -214,7 +214,7 @@ test-suite hspec
               , exceptions
               , hspec
               , HUnit
-              , pact
+              , seal
               , aeson
               , containers
               , directory

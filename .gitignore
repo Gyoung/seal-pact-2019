@@ -15,4 +15,5 @@ docs/_build
 log/
 /deleteme.sqllite
 /.pact-history
+/.seal-history
 /result

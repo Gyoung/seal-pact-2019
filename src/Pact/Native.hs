@@ -130,10 +130,10 @@ enforceOneDef =
     enforceOne i as = argsError' i as
 
 pactVersionDef :: NativeDef
-pactVersionDef = setTopLevelOnly $ defRNative "pact-version"
+pactVersionDef = setTopLevelOnly $ defRNative "seal-version"
   (\_ _ -> return $ toTerm pactVersion)
   (funType tTyString [])
-  "Obtain current pact build version. `(pact-version)`"
+  "Obtain current seal build version. `(seal-version)`"
 
 
 formatDef :: NativeDef
@@ -267,15 +267,15 @@ langDefs =
 
     ,formatDef
 
-    ,defRNative "pact-id" pactId (funType tTyInteger [])
-     "Return ID if called during current pact execution, failing if not."
+    ,defRNative "seal-id" pactId (funType tTyInteger [])
+     "Return ID if called during current seal execution, failing if not."
 
     ,readDecimalDef
     ,defRNative "read-integer" readInteger (funType tTyInteger [("key",tTyString)])
      "Parse KEY string or number value from top level of message data body as integer. `$(read-integer \"age\")`"
     ,defRNative "read-msg" readMsg (funType a [] <> funType a [("key",tTyString)])
      "Read KEY from top level of message data body, or data body itself if not provided. \
-     \Coerces value to their corresponding pact type: String -> string, Number -> integer, Boolean -> bool, \
+     \Coerces value to their corresponding seal type: String -> string, Number -> integer, Boolean -> bool, \
      \List -> list, Object -> object. However, top-level values are provided as a 'value' JSON type. \
      \`$(defun exec ()\n   (transfer (read-msg \"from\") (read-msg \"to\") (read-decimal \"amount\")))`"
 
@@ -291,21 +291,21 @@ langDefs =
     ,setTopLevelOnly $ defRNative "list-modules" listModules
      (funType (TyList tTyString) []) "List modules available for loading."
     ,defRNative "yield" yield (funType yieldv [("OBJECT",yieldv)])
-     "Yield OBJECT for use with 'resume' in following pact step. The object is similar to database row objects, in that \
+     "Yield OBJECT for use with 'resume' in following seal step. The object is similar to database row objects, in that \
      \only the top level can be bound to in 'resume'; nested objects are converted to opaque JSON values. \
      \`$(yield { \"amount\": 100.0 })`"
     ,defNative "resume" resume
      (funType a [("binding",TySchema TyBinding (mkSchemaVar "y")),("body",TyAny)])
-     "Special form binds to a yielded object value from the prior step execution in a pact."
+     "Special form binds to a yielded object value from the prior step execution in a seal."
 
     ,pactVersionDef
 
-    ,setTopLevelOnly $ defRNative "enforce-pact-version" enforceVersion
+    ,setTopLevelOnly $ defRNative "enforce-seal-version" enforceVersion
      (funType tTyBool [("min-version",tTyString)] <>
       funType tTyBool [("min-version",tTyString),("max-version",tTyString)])
-    "Enforce runtime pact version as greater than or equal MIN-VERSION, and less than or equal MAX-VERSION. \
+    "Enforce runtime seal version as greater than or equal MIN-VERSION, and less than or equal MAX-VERSION. \
     \Version values are matched numerically from the left, such that '2', '2.2', and '2.2.3' would all allow '2.2.3'. \
-    \`(enforce-pact-version \"2.3\")`"
+    \`(enforce-seal-version \"2.3\")`"
 
     ,defRNative "contains" contains
     (funType tTyBool [("value",a),("list",TyList a)] <>
@@ -470,7 +470,7 @@ readInteger i as = argsError i as
 
 pactId :: RNativeFun e
 pactId i [] = use evalPactExec >>= \pe -> case pe of
-  Nothing -> evalError' i "pact-id: not in pact execution"
+  Nothing -> evalError' i "seal-id: not in seal execution"
   Just PactExec{..} -> return $ toTerm _pePactId
 pactId i as = argsError i as
 
@@ -574,7 +574,7 @@ enforceVersion i as = case as of
           pv' <- parseNum pactVersion pv
           mv' <- parseNum fullV mv
           when (mv' `failCmp` pv') $ evalError' i $
-            "Invalid pact version " ++ show pactVersion ++ ", " ++ msg ++ " allowed: " ++ show fullV
+            "Invalid seal version " ++ show pactVersion ++ ", " ++ msg ++ " allowed: " ++ show fullV
           return (mv' `succCmp` pv')
 
 -- FIXME contains?

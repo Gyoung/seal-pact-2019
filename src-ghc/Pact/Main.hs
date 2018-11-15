@@ -71,11 +71,11 @@ replOpts =
     (OLoad
      <$> O.flag False True
          (O.short 'r' <> O.long "findscript" <>
-          O.help "For .pact files, attempts to locate a .repl file to execute.")
+          O.help "For .seal files, attempts to locate a .repl file to execute.")
      <*> O.flag False True
          (O.short 't' <> O.long "trace" <> O.help "Show trace output")
      <*> O.argument O.str
-        (O.metavar "FILE" <> O.help "File path to compile (if .pact extension) or execute.")) <|>
+        (O.metavar "FILE" <> O.help "File path to compile (if .seal extension) or execute.")) <|>
     (OApiReq <$> O.strOption (O.short 'a' <> O.long "apireq" <> O.metavar "REQ_YAML" <>
                              O.help "Format API request JSON using REQ_YAML file")
       <*> O.flag False True (O.short 'l' <> O.long "local" <> O.help "Format for /local endpoint")) <|>
@@ -83,7 +83,7 @@ replOpts =
 
 argParser :: O.ParserInfo Option
 argParser = O.info (O.helper <*> replOpts)
-            (O.fullDesc <> O.header "The Pact Smart Contract Language Interpreter")
+            (O.fullDesc <> O.header "The Seal Smart Contract Language Interpreter")
 
 _testArgs :: String -> O.ParserResult Option
 _testArgs = O.execParserPure O.defaultPrefs argParser . words
@@ -97,7 +97,7 @@ main = do
       exitLoad = exitEither (\_ -> hPutStrLn stderr "Load successful" >> hFlush stderr)
   case as of
     OServer conf -> serve conf
-    OVersion -> putStrLn $ "pact version " ++ unpack pactVersion
+    OVersion -> putStrLn $ "seal version " ++ unpack pactVersion
     OBuiltins -> echoBuiltins
     OLoad findScript dolog fp
         | isPactFile fp -> do

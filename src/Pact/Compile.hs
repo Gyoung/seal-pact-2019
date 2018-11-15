@@ -478,7 +478,7 @@ bodyForm' :: Compile ([Term Name],Info)
 bodyForm' = (,) <$> some term <*> contextInfo
 
 _compileAccounts :: IO (Either PactError [Term Name])
-_compileAccounts = _parseF "examples/accounts/accounts.pact" >>= _compile id
+_compileAccounts = _parseF "examples/accounts/accounts.seal" >>= _compile id
 
 _compile :: (ParseState CompileState -> ParseState CompileState) ->
             TF.Result ([Exp Parsed],String) -> IO (Either PactError [Term Name])

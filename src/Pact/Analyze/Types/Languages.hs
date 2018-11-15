@@ -562,7 +562,7 @@ instance UserShow a => UserShow (Term a) where
 
     Read _ tab _ x       -> parenList ["read", userShow tab, userShow x]
     Write _ _ tab _ x y  -> parenList ["read", userShow tab, userShow x, userShow y]
-    PactVersion          -> parenList ["pact-version"]
+    PactVersion          -> parenList ["seal-version"]
     Format x y           -> parenList ["format", userShow x, userShowList y]
     FormatTime x y       -> parenList ["format", userShow x, userShow y]
     ParseTime Nothing y  -> parenList ["parse-time", userShow y]

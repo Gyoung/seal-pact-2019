@@ -49,7 +49,7 @@ pactEval :: ETerm -> GenState -> IO EvalResult
 pactEval etm gState = (do
     pactTm <- case runReaderT (toPactTm etm) (genEnv, gState) of
       Just tm -> pure tm
-      Nothing -> error $ "failed to convert term to pact " ++ show etm
+      Nothing -> error $ "failed to convert term to seal " ++ show etm
     evalEnv <- liftIO $ mkEvalEnv gState
 
     let evalState = Default.def

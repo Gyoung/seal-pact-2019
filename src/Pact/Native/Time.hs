@@ -32,7 +32,7 @@ import Pact.Native.Internal
 
 
 timedoc :: Text
-timedoc = "See [\"Time Formats\" docs](pact-reference.html#time-formats) for supported formats."
+timedoc = "See [\"Time Formats\" docs](seal-reference.html#time-formats) for supported formats."
 
 defAddTime :: NativeDef
 defAddTime = defRNative "add-time" addTime

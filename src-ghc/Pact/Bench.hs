@@ -66,7 +66,7 @@ entity = Just $ EntityName "entity"
 
 loadBenchModule :: PactDbEnv e -> IO RefStore
 loadBenchModule db = do
-  m <- pack <$> readFile "tests/bench/bench.pact"
+  m <- pack <$> readFile "tests/bench/bench.seal"
   pc <- parseCode m
   let md = MsgData S.empty
            (object ["keyset" .= object ["keys" .= ["benchadmin"::Text], "pred" .= (">"::Text)]])

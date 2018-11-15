@@ -1,4 +1,4 @@
 (env-data { "keyset": { "keys": ["benchadmin"], "pred": ">" } })
 (begin-tx)
-(load "bench.pact")
+(load "bench.seal")
 (commit-tx)

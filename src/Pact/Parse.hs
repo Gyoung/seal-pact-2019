@@ -108,7 +108,7 @@ exprs = some expr
 exprsOnly :: (Monad m, TokenParsing m, DeltaParsing m) => m [Exp Parsed]
 exprsOnly = unPactParser $ whiteSpace *> exprs <* TF.eof
 
--- | "Production" parser: atto, parse multiple exps.
+-- | "Production" parser: atto, parse multiple exps. 
 parseExprs :: Text -> Either String [Exp Parsed]
 parseExprs = AP.parseOnly (unPactParser (whiteSpace *> exprs))
 
@@ -120,4 +120,4 @@ _parseS :: String -> TF.Result [Exp Parsed]
 _parseS = TF.parseString exprsOnly mempty
 
 _parseAccounts :: IO (Result ([Exp Parsed], String))
-_parseAccounts = _parseF exprsOnly "examples/accounts/accounts.pact"
+_parseAccounts = _parseF exprsOnly "examples/accounts/accounts.seal"

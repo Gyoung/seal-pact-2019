@@ -39,8 +39,8 @@ import           Pact.Types.Lang
 
 main :: IO ()
 main = do
-  withFile "docs/pact-functions.md"      WriteMode renderFunctions
-  withFile "docs/pact-properties-api.md" WriteMode renderProperties
+  withFile "docs/seal-functions.md"      WriteMode renderFunctions
+  withFile "docs/seal-properties-api.md" WriteMode renderProperties
 
 data ExampleType = Exec | ExecErr | Lit
 
@@ -93,7 +93,7 @@ renderExamples h es = do
     case et of
       Lit -> hPutStrLn h e'
       _ -> do
-        hPutStrLn h $ "pact> " ++ e'
+        hPutStrLn h $ "seal> " ++ e'
         r <- evalRepl FailureTest e'
         case (r,et) of
           (Right r',_)       -> hPrint h r'

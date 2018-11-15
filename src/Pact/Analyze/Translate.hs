@@ -884,7 +884,7 @@ translateNode astNode = withAstContext astNode $ case astNode of
       Just Refl -> pure $ ESimple ta $ IfThenElse cond' (truePath, a) (falsePath, b)
       _         -> throwError' (BranchesDifferentTypes (EType ta) (EType tb))
 
-  AST_NFun _node "pact-version" [] -> pure $ ESimple TStr PactVersion
+  AST_NFun _node "seal-version" [] -> pure $ ESimple TStr PactVersion
 
   AST_WithRead node table key bindings schemaNode body -> do
     schema            <- translateSchema schemaNode
@@ -954,7 +954,7 @@ translateNode astNode = withAstContext astNode $ case astNode of
     pure $ EObject schema $ CoreTerm $ LiteralObject $ Map.fromList kvs'
 
   AST_Step                -> throwError' $ NoPacts astNode
-  AST_NFun _ "pact-id" [] -> throwError' $ NoPacts astNode
+  AST_NFun _ "seal-id" [] -> throwError' $ NoPacts astNode
 
   AST_NFun _ f _
     | f `Set.member` Set.fromList

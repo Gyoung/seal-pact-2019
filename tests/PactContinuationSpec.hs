@@ -47,7 +47,7 @@ testNestedPacts opts = before_ flushDb $ after_ flushDb $
 
     let allChecks = [makeCheck moduleCmd False Nothing,
                      makeCheck nestedExecPactCmd True
-                      (Just "(defpact tester ()\n  (step \"st...: Failure: Nested pact execution, aborting")]
+                      (Just "(defpact tester ()\n  (step \"st...: Failure: Nested seal execution, aborting")]
 
     allResults `shouldMatch` allChecks
 
@@ -62,19 +62,19 @@ testPactContinuation opts = before_ flushDb $ after_ flushDb $ do
     testSimpleServerCmd opts `shouldReturn` expRes
 
   context "when provided with correct next step" $
-    it "executes the next step and updates pact's state" $
+    it "executes the next step and updates seal's state" $
       testCorrectNextStep opts
 
   context "when provided with incorrect next step" $
-    it "throws error and does not update pact's state" $
+    it "throws error and does not update seal's state" $
       testIncorrectNextStep opts
 
-  context "when last step of a pact executed" $
-    it "deletes pact from the state" $
+  context "when last step of a seal executed" $
+    it "deletes seal from the state" $
       testLastStep opts
 
-  context "when error occurs when executing pact step" $
-    it "throws error and does not update pact's state" $
+  context "when error occurs when executing seal step" $
+    it "throws error and does not update seal's state" $
       testErrStep opts
 
 testSimpleServerCmd :: Options -> IO (Maybe ApiResult)
@@ -192,19 +192,19 @@ testErrStep opts = do
 testPactRollback :: Options -> Spec
 testPactRollback opts = before_ flushDb $ after_ flushDb $ do
   context "when provided with correct rollback step" $
-    it "executes the rollback function and deletes pact from state" $
+    it "executes the rollback function and deletes seal from state" $
       testCorrectRollbackStep opts
 
   context "when provided with incorrect rollback step" $
-    it "throws error and does not delete pact from state" $
+    it "throws error and does not delete seal from state" $
       testIncorrectRollbackStep opts
 
   context "when error occurs when executing rollback function" $
-    it "throws error and does not delete pact from state" $
+    it "throws error and does not delete seal from state" $
       testRollbackErr opts
 
   context "when trying to rollback a step without a rollback function" $
-    it "outputs that no rollback function exists for step and deletes pact from state" $
+    it "outputs that no rollback function exists for step and deletes seal from state" $
       testNoRollbackFunc opts
 
 
@@ -329,7 +329,7 @@ testPactYield opts = before_ flushDb $ after_ flushDb $ do
       testValidYield opts
 
   context "when previous step does not yield value" $
-    it "throws error when trying to resume, and does not delete pact from state" $
+    it "throws error when trying to resume, and does not delete seal from state" $
       testNoYield opts
 
   it "resets yielded values after each step" $

@@ -89,24 +89,24 @@ replDefs = ("Repl",
      ,defZRNative "env-keys" setsigs (funType tTyString [("keys",TyList tTyString)])
       "Set transaction signature KEYS. `(env-keys [\"my-key\" \"admin-key\"])`"
      ,defZRNative "env-data" setmsg (funType tTyString [("json",json)]) $
-      "Set transaction JSON data, either as encoded string, or as pact types coerced to JSON. " <>
+      "Set transaction JSON data, either as encoded string, or as seal types coerced to JSON. " <>
       "`(env-data { \"keyset\": { \"keys\": [\"my-key\" \"admin-key\"], \"pred\": \"keys-any\" } })`"
      ,defZRNative "env-step"
       setstep (funType tTyString [] <>
                funType tTyString [("step-idx",tTyInteger)] <>
                funType tTyString [("step-idx",tTyInteger),("rollback",tTyBool)] <>
                funType tTyString [("step-idx",tTyInteger),("rollback",tTyBool),("resume",TySchema TyObject (mkSchemaVar "y"))])
-      ("Set pact step state. With no arguments, unset step. With STEP-IDX, set step index to execute. " <>
+      ("Set seal step state. With no arguments, unset step. With STEP-IDX, set step index to execute. " <>
        "ROLLBACK instructs to execute rollback expression, if any. RESUME sets a value to be read via 'resume'." <>
-       "Clears any previous pact execution state. `$(env-step 1)` `$(env-step 0 true)`")
-     ,defZRNative "pact-state" pactState (funType (tTyObject TyAny) [])
-      ("Inspect state from previous pact execution. Returns object with fields " <>
+       "Clears any previous seal execution state. `$(env-step 1)` `$(env-step 0 true)`")
+     ,defZRNative "seal-state" pactState (funType (tTyObject TyAny) [])
+      ("Inspect state from previous seal execution. Returns object with fields " <>
       "'yield': yield result or 'false' if none; 'step': executed step; " <>
-      "'executed': indicates if step was skipped because entity did not match. `$(pact-state)`")
+      "'executed': indicates if step was skipped because entity did not match. `$(seal-state)`")
      ,defZRNative "env-entity" setentity
       (funType tTyString [] <> funType tTyString [("entity",tTyString)])
       ("Set environment confidential ENTITY id, or unset with no argument. " <>
-      "Clears any previous pact execution state. `$(env-entity \"my-org\")` `$(env-entity)`")
+      "Clears any previous seal execution state. `$(env-entity \"my-org\")` `$(env-entity)`")
      ,defZRNative "begin-tx" (tx Begin) (funType tTyString [] <>
                                         funType tTyString [("name",tTyString)])
        "Begin transaction with optional NAME. `$(begin-tx \"load contract\")`"
@@ -135,7 +135,7 @@ replDefs = ("Repl",
 #endif
 
      ,defZRNative "json" json' (funType tTyValue [("exp",a)]) $
-      "Encode pact expression EXP as a JSON value. " <>
+      "Encode seal expression EXP as a JSON value. " <>
       "This is only needed for tests, as Pact values are automatically represented as JSON in API output. " <>
       "`(json [{ \"name\": \"joe\", \"age\": 10 } {\"name\": \"mary\", \"age\": 25 }])`"
      ,defZRNative "sig-keyset" sigKeyset (funType tTyKeySet [])
@@ -244,7 +244,7 @@ pactState :: RNativeFun LibState
 pactState i [] = do
   e <- use evalPactExec
   case e of
-    Nothing -> evalError' i "pact-state: no pact exec in context"
+    Nothing -> evalError' i "seal-state: no seal exec in context"
     Just PactExec{..} -> return $ (\o -> TObject o TyAny def)
       [(tStr "yield",fromMaybe (toTerm False) _peYield)
       ,(tStr "executed",toTerm _peExecuted)

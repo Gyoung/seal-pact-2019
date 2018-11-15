@@ -40,11 +40,11 @@ testDualEvaluation etm@(ESimple ty _tm) gState = do
   case (ePactVal, eAnalyzeVal) of
     (Left _pactErr, Left _analyzeErr) -> success
     (Left pactErr, Right analyzeVal) -> do
-      footnote $ "got failure from pact: " ++ pactErr
+      footnote $ "got failure from seal: " ++ pactErr
       footnote $ "got value from analyze: " ++ show analyzeVal
       failure
     (Right pactVal, Left analyzeErr) ->  do
-      footnote $ "got value from pact: " ++ show pactVal
+      footnote $ "got value from seal: " ++ show pactVal
       footnote $ "got failure from analyze: " ++ analyzeErr
       failure
 
@@ -105,7 +105,7 @@ spec = describe "analyze properties" $ do
 
   it "show round-trip userShow / parse" pending
 
-  it "userShow should have the same result on both the pact and analyze side"
+  it "userShow should have the same result on both the seal and analyze side"
     pending
 
 -- Usually we run via `spec`, but these are useful for running tests

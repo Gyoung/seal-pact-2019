@@ -12,4 +12,4 @@ module Pact.Types.Version (pactVersion) where
 import Data.Text (Text, pack)
 
 pactVersion :: Text
-pactVersion = pack VERSION_pact
+pactVersion = pack VERSION_seal

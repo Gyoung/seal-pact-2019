@@ -60,7 +60,7 @@ completeFn = completeQuotedWord (Just '\\') "\"" listFiles $
 replSettings :: (MonadIO m, MonadState ReplState m) => Settings m
 replSettings = Settings
   completeFn
-  (Just ".pact-history") -- write history to ".pact-history"
+  (Just ".seal-history") -- write history to ".seal-history"
   True -- automatically add each line to history
 
 generalRepl :: ReplMode -> IO (Either () (Term Name))
@@ -80,7 +80,7 @@ haskelineLoop :: [String] -> Maybe (Term Name) -> HaskelineRepl (Either () (Term
 haskelineLoop prevLines lastResult =
   let
     getNonEmptyInput = do
-      let lineHeader = if null prevLines then "pact> " else "....> "
+      let lineHeader = if null prevLines then "seal> " else "....> "
       line <- getInputLine lineHeader
 
       case line of
@@ -89,7 +89,7 @@ haskelineLoop prevLines lastResult =
         Just input -> handleMultilineInput input prevLines lastResult
 
     interruptHandler = do
-      liftIO $ putStrLn "Type ctrl-d to exit pact"
+      liftIO $ putStrLn "Type ctrl-d to exit seal"
       haskelineLoop [] lastResult
 
   in handleInterrupt interruptHandler getNonEmptyInput

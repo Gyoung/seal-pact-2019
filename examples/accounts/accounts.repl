@@ -12,7 +12,7 @@
 (env-keys ["accountadmin" "user123" "user456"])
 (env-data { "accounts-admin-keyset": ["accountadmin"] })
 (begin-tx)
-(load "accounts.pact")
+(load "accounts.seal")
 (commit-tx)
 (verify 'accounts)
 (expect "test const evaluation" "ref" accounts.PACT_REF)

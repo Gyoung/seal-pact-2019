@@ -173,7 +173,7 @@ dieAR errMsg = throwM . userError $ "Failure reading request yaml. Yaml file key
   \  codeFile: Transaction code file \n\
   \  data: JSON transaction data \n\
   \  dataFile: JSON transaction data file \n\
-  \  keyPairs: list of key pairs for signing (use pact -g to generate): [\n\
+  \  keyPairs: list of key pairs for signing (use seal -g to generate): [\n\
   \    public: base 16 public key \n\
   \    secret: base 16 secret key \n\
   \    ] \n\
