@@ -249,10 +249,10 @@ loadModule i@Interface{..} body info gas0 = do
 filterOutPrivateDefs :: HM.HashMap Text (Term Name) -> HM.HashMap Text Ref -> HM.HashMap Text Ref
 filterOutPrivateDefs defs = HM.filterWithKey isNotPrivateDef
   where
-    isNotPrivateDef dn _ = do
+    isNotPrivateDef dn _ =
       case HM.lookup dn defs of
         Nothing -> False
-        Just (TDef Private _ _ _ _ _ _ _) -> False
+        Just (TDef PRIVATE _ _ _ _ _ _ _) -> False
         _ -> True
 
 -- | Definitions are transformed such that all free variables are resolved either to
