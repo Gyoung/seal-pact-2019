@@ -218,7 +218,8 @@ loadModule m@Module{..} bod1 mi g0 = do
       t -> evalError (_tInfo t) "Malformed contract"
   evaluatedDefs <- evaluateDefs mi modDefs1
   evaluateConstraints mi m evaluatedDefs
-  let md = ModuleData m evaluatedDefs
+  let md = ModuleData m $ filterOutPrivateDefs modDefs1 evaluatedDefs
+  -- let md = ModuleData m evaluatedDefs
   installModule md
   (evalRefs . rsNewModules) %= HM.insert _mName md
   return (g1, modDefs1)
@@ -240,10 +241,12 @@ loadModule i@Interface{..} body info gas0 = do
       second HM.fromList <$> foldM doDef (gas0,[]) bd
     t -> evalError (_tInfo t) "Malformed interface"
   evaluatedDefs <- evaluateDefs info idefs
-  let md = ModuleData i $ filterOutPrivateDefs idefs evaluatedDefs
+  let md = ModuleData i evaluatedDefs
   installModule md
   (evalRefs . rsNewModules) %= HM.insert _interfaceName md
   return (gas1, idefs)
+
+
 
 -- 过滤掉private函数
 filterOutPrivateDefs :: HM.HashMap Text (Term Name) -> HM.HashMap Text Ref -> HM.HashMap Text Ref
