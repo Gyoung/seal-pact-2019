@@ -18,6 +18,9 @@
 
   ;; (def totalsupply [^decimal totalsupply])
 
+  (declare transfer-event)
+  (declare approval-event)
+
   (defrecord balances
     [^decimal balance
      ^keyset keyset])
@@ -34,13 +37,14 @@
   ;; (defn total-supply [] totalsupply) ;; for mintable
   
   (defn allowance [owner spender]
+    ;; FIXME ID
     (with-read allowance-table
-               {:owner owner :spender spender}
+               ID
                { allowed :allowed }
                allowed))
 
   ;; FIXME private function
-  (defn _transfer [from to amount]
+  (defn- _transfer [from to amount]
     (with-read balances-table from { from-bal :balance , keyset :keyset }
       (enforce-keyset keyset)
       (with-read balances-table to { to-bal :balance }
@@ -50,6 +54,7 @@
                 { :balance (- from-bal amount) })
         (update balances-table to
                 { :balance (+ to-bal amount) })
+        (emit (transfer-event from to amount))
         (format "{} paid {} {}" [from to amount]))))
   
   (defn create-account [id initial-balance keyset]
@@ -71,21 +76,29 @@
 
   (defn transfer [to amount]
     ;; FIXME need msg.sender
-    (_transfer msg.sender to value))
+    (_transfer msg.sender spender value)
+    true)
 
   (defn approve [spender amount]
-    ;; FIXME need msg.sender
+    ;; FIXME need msg.sender ID
     ;; set allowed.msgsender.spender to amount
-    )
+    (update allowance-table ID { :allowed amount })
+    (emit (approval-event msgsender spender amount))
+    true)
 
   (defn transfer-from [from to amount]
     ;; FIXME need msg.sender to change allowed
     ;; decrease allowed.from.msgsender by amount
-    (_transfer from to amount)))
+    (let [allowed (allowance from msgsender)
+          new-amount (- allowed amount)]
+      (update allowance-talbe ID { :allowed new-amount })
+      (_transfer from to amount)
+      true)))
 
 ;define table
-(create-table total-supply)
+;; (create-table total-supply)
 (create-table balances-table)
+(create-table allowance-table)
 
 ;create accounts
 (create-account "Sarah" 100.25 (read-keyset "sarah-keyset"))
@@ -93,6 +106,9 @@
 
 ;; do payment, simluating SARAH keyset.
 (env-keys ["SARAH"])
+;; ==> this should error
+(_transfer-from "Sarah" "James" 20.0)
+;; <==
 (transfer-from "Sarah" "James" 25.0)
 (format "Sarah's balance is {}" [(get-balance "Sarah")])
 
