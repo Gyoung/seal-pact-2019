@@ -73,9 +73,12 @@ bindReduce ps bd bi lkpFun = do
   !(vs :: [(Arg (Term Ref),Term Ref)]) <- forM ps $ mapM $ \var -> do
           var' <- reduce var
           case var' of
-            (TLitKeyword s) -> case lkpFun s of
+            (TLitString s) -> case lkpFun s of
                                 Nothing -> evalError bi $ "Bad column in binding: " ++ unpack s
                                 Just v -> return v
+            (TLitKeyword s) -> case lkpFun s of
+                                Nothing -> evalError bi $ "Bad column in binding: " ++ unpack s
+                                Just v -> return v                    
             t -> evalError bi $ "Invalid column identifier in binding: " ++ show t
   let bd'' = instantiate (resolveArg bi (map snd vs)) bd
   -- NB stack frame here just documents scope, but does not incur gas
