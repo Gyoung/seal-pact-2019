@@ -43,7 +43,7 @@
   (defn- get-hash [owner spender]
     (hash [owner spender]))
   
-  (defn allowance [owner spender]
+  (defn allowance1 [owner spender]
     (with-read allowance-table
                (get-hash owner spender)
                { allowed :allowed }
@@ -67,7 +67,7 @@
     (enforce-keyset 'admin-keyset)
     (enforce (>= initial-balance 0.0) "Initial balances must be >= 0.")
     (insert balances-table address
-            { :balance initial-balance :keyset keyset }))
+            { :balance initial-balance, :keyset keyset }))
 
   (defn balance-of [id]
     "Only users or admin can read balance."
@@ -90,14 +90,16 @@
     true)
 
   (defn transfer-from [from to amount]
-    (let [allowed (allowance from MSG_SENDER)
+    (let [allowed (allowance1 from MSG_SENDER)
           new-amount (- allowed amount)]
       (enforce (>= new-amount 0.0) "Negative Allowance Amount")
       (update allowance-table
               (get-hash from MSG_SENDER)
               { :allowed new-amount })
       (_transfer from to amount)
-      true)))
+      true)
+  )
+)
 
 ;define table
 ;; (create-table total-supply)
@@ -112,6 +114,7 @@
 (env-keys ["SARAH"])
 ;; ==> this should error
 (_transfer "Sarah" "James" 20.0)
+;;(_transfer "Sarah" "James" 20.0)
 
 ;; <==
 (transfer-from "Sarah" "James" 25.0)
