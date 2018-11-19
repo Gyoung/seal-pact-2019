@@ -27,6 +27,10 @@
     [^decimal balance
      ^keyset keyset])
 
+  (defn emit [evt] "ignore")
+  (defn transfer-event [from to amount] "ignore event")
+  (defn approval-event [from to amount] "ignore event")
+
   ;; use owner as id
   (deftable balances-table ^{balances})
 
@@ -110,7 +114,8 @@
 ;; do payment, simluating SARAH keyset.
 (env-keys ["SARAH"])
 ;; ==> this should error
-(_transfer-from "Sarah" "James" 20.0)
+(_transfer "Sarah" "James" 20.0)
+
 ;; <==
 (transfer-from "Sarah" "James" 25.0)
 (format "Sarah's balance is {}" [(get-balance "Sarah")])
@@ -125,5 +130,9 @@
 (env-keys ["SARAH"])
 (transfer-from "Admin" "James" 100.0)
 (transfer-from "Admin" "James" 800.0)
+(format "James's balance is {}(Should be 900.0)" [(get-balance "James")])
 (transfer-from "Admin" "James" 800.0) ;; should fail
+
+(env-keys ["JAMES"])
+(transfer-from "James" "Admin" 100.0)
 (format "James's balance is {}" [(get-balance "James")])

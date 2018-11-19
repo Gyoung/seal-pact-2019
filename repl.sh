@@ -1,3 +1,3 @@
 #!/bin/bash
 
-stack exec -- rlwrap -A pact $@
+stack exec -- rlwrap -A seal $@
