@@ -20,9 +20,6 @@
 
   (def MSG_SENDER "MSG_SENDER")
 
-  (declare transfer-event)
-  (declare approval-event)
-
   (defrecord balances
     [^decimal balance
      ^keyset keyset])

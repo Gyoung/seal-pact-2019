@@ -20,16 +20,13 @@
 
   (def MSG_SENDER "MSG_SENDER")
 
-  (declare transfer-event)
-  (declare approval-event)
-
   (defrecord balances
     [^decimal balance
      ^keyset keyset])
 
-  (defn emit [evt] "ignore")
-  (defn transfer-event [from to amount] "ignore event")
-  (defn approval-event [from to amount] "ignore event")
+  (defn emit [evt] true)
+  (defn transfer-event [from to amount] true)
+  (defn approval-event [from to amount] true)
 
   ;; use owner as id
   (deftable balances-table ^{balances})
@@ -65,11 +62,11 @@
         (emit (transfer-event from to amount))
         (format "{} paid {} {}" [from to amount]))))
   
-  (defn create-account [id initial-balance keyset]
+  (defn create-account [address initial-balance keyset]
     "Create a new account for ID with INITIAL-BALANCE funds, must be administrator."
     (enforce-keyset 'admin-keyset)
     (enforce (>= initial-balance 0.0) "Initial balances must be >= 0.")
-    (insert balances-table id
+    (insert balances-table address
             { :balance initial-balance :keyset keyset }))
 
   (defn balance-of [id]
@@ -82,7 +79,7 @@
       balance))
 
   (defn transfer [to amount]
-    (_transfer MSG_SENDER spender value)
+    (_transfer MSG_SENDER to amount)
     true)
 
   (defn approve [spender amount]
