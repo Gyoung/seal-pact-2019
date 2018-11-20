@@ -43,11 +43,12 @@ data MsgData = MsgData {
   mdSigs :: !(S.Set PublicKey),
   mdData :: !Value,
   mdStep :: !(Maybe PactStep),
-  mdHash :: !Hash
+  mdHash :: !Hash,
+  mdValue :: !Int
   }
 
 initMsgData :: Hash -> MsgData
-initMsgData = MsgData def Null def
+initMsgData h = MsgData def Null def h 0  --todo init msg.value
 
 data EvalResult = EvalResult {
   erInput :: ![Term Name],
@@ -83,6 +84,7 @@ setupEvalEnv dbEnv ent mode msgData refStore gasEnv =
   , _eePurity = PImpure
   , _eeHash = mdHash msgData
   , _eeGasEnv = gasEnv
+  , _eeMsgValue = mdValue msgData
   }
   where modeToTx (Transactional t) = Just t
         modeToTx Local = Nothing

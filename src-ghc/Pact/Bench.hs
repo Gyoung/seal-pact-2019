@@ -72,6 +72,7 @@ loadBenchModule db = do
            (object ["keyset" .= object ["keys" .= ["benchadmin"::Text], "pred" .= (">"::Text)]])
            Nothing
            initialHash
+           0 --todo init msg.value
   erRefStore <$> evalExec (setupEvalEnv db entity (Transactional 1) md initRefStore freeGasEnv) pc
 
 parseCode :: Text -> IO ParsedCode
