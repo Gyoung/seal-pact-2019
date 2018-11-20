@@ -18,7 +18,7 @@
 
   ;; (def totalsupply [^decimal totalsupply])
 
-  (def MSG_SENDER "Sarah")
+  ;; (def MSG_SENDER "Sarah")
 
   (defn get-keyset [key]
     (if (= key "Admin")
@@ -90,30 +90,30 @@
       balance))
 
   (defn transfer [to amount]
-    (_transfer MSG_SENDER to amount true))
+    (_transfer (MSG_SENDER) to amount true))
 
   (defn approve [spender amount]
     (enforce-keyset 'admin-keyset) ;; only admin can approve
-    (format "{} allowed {} {}" [MSG_SENDER spender (get-allowance MSG_SENDER spender)])
-    (let [MSG_SENDER "Admin" ;; let MSG_SENDER be Admin
-          allowed (get-allowance MSG_SENDER spender)]
+    (format "{} allowed {} {}" [(MSG_SENDER) spender (get-allowance (MSG_SENDER) spender)])
+    (let [(MSG_SENDER) "Admin" ;; let (MSG_SENDER) be Admin
+          allowed (get-allowance (MSG_SENDER) spender)]
      (if (= -1 allowed)
        (insert allowance-table
-               (get-hash MSG_SENDER spender)
-               { :allowed amount, :owner (get-keyset MSG_SENDER), :spender (get-keyset spender) })
+               (get-hash (MSG_SENDER) spender)
+               { :allowed amount, :owner (get-keyset (MSG_SENDER)), :spender (get-keyset spender) })
        (update allowance-table
-               (get-hash MSG_SENDER spender)
-               { :allowed (+ allowed amount), :owner (get-keyset MSG_SENDER), :spender (get-keyset spender) })))
+               (get-hash (MSG_SENDER) spender)
+               { :allowed (+ allowed amount), :owner (get-keyset (MSG_SENDER)), :spender (get-keyset spender) })))
 
-    (emit (approval-event MSG_SENDER spender amount))
+    (emit (approval-event (MSG_SENDER) spender amount))
     true)
 
   (defn transfer-from [from to amount]
-    (let [allowed    (get-allowance from MSG_SENDER)
+    (let [allowed    (get-allowance from (MSG_SENDER))
           new-amount (- allowed amount)]
       (enforce (>= new-amount 0.0) "Negative Allowance Amount")
       (update allowance-table
-              (get-hash from MSG_SENDER)
+              (get-hash from (MSG_SENDER))
               { :allowed new-amount })
       (_transfer from to amount false)
       true))
@@ -139,7 +139,7 @@
 ;; <==
 ;; (transfer-from "Sarah" "James" 25.0)
 (format "Sarah's balance is {}" [(balance-of "Sarah")])
-(transfer "James" 100.0) ;; MSG_SENDER is Sarah
+(transfer "James" 100.0) ;; (MSG_SENDER) is Sarah
 (format "Sarah's balance is {}" [(balance-of "Sarah")])
 
 ;; read James' balance as JAMES
