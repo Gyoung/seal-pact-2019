@@ -177,7 +177,7 @@ bindingForm = do
         -- a <- sep ColonEquals *> arg
         return (a,col)
   (bindings,bi) <- withList' Braces $
-    (,) <$> pair `sepBy1` sep Comma <*> contextInfo
+    (,) <$> pair `sepBy` sep Comma <*> contextInfo
   TBinding bindings <$> abstractBody (map fst bindings) <*>
     pure (BindSchema TyAny) <*> pure bi
 
