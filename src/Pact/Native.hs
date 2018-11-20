@@ -62,7 +62,7 @@ import Pact.Types.Runtime
 import Pact.Parse
 import Pact.Types.Version
 import Pact.Types.Hash
--- import qualified Data.Set as S
+import qualified Data.Set as S
 
 -- | All production native modules.
 natives :: [NativeModule]
@@ -283,8 +283,8 @@ langDefs =
     ,defRNative "tx-hash" txHash (funType tTyString [])
      "Obtain hash of current transaction as a string. `(tx-hash)`"
     
-    -- ,defRNative "MSG_SENDER" msgSender (funType tTyString [])
-    --  "Obtain hash of current transaction as a string. `(tx-hash)`" 
+    ,defRNative "MSG_SENDER" msgSender (funType tTyString [])
+     "Obtain hash of current transaction as a string. `(tx-hash)`" 
 
     ,defNative (specialForm Bind) bind
      (funType a [("src",tTyObject row),("binding",TySchema TyBinding row)])
@@ -625,12 +625,9 @@ txHash :: RNativeFun e
 txHash _ [] = (tStr . asString) <$> view eeHash
 txHash i as = argsError i as
 
--- msgSender :: RNativeFun e
--- msgSender _ [] = (decodeUtf8 . _pubKey) <$> S.toList $ view eeMsgSigs
--- msgSender i as = argsError i as
-
---type RNativeFun e = FunApp -> [Term Name] -> Eval e (Term Name)
---sigKeyset _ _ = view eeMsgSigs >>= \ss -> return $ toTerm $ KeySet (S.toList ss) (Name (asString KeysAll) def)
+msgSender :: RNativeFun e
+msgSender _ [] = view eeMsgSigs >>= \ss -> return $ toTerm $ (decodeUtf8 . _pubKey) $ head (S.toList ss)
+msgSender i as = argsError i as
 
 
 -- | Change of base for Text-based representations of integrals. Only bases
