@@ -43,11 +43,12 @@
   (defn- get-hash [owner spender]
     (hash [owner spender]))
   
-  (defn allowance1 [owner spender]
-    (with-read allowance-table
-               (get-hash owner spender)
-               { allowed :allowed }
-               allowed))
+  (defn get-allowance [owner spender]
+    (with-default-read allowance-table
+      (get-hash owner spender)
+      { :allowed 0 }
+      { allowed :allowed }
+      allowed))
 
   (defn- _transfer [from to amount]
     (with-read balances-table from { from-bal :balance , keyset :keyset }
@@ -83,14 +84,16 @@
     true)
 
   (defn approve [spender amount]
-    (update allowance-table
-            (get-hash MSG_SENDER spender)
-            { :allowed amount })
+    (format "{} allowed {} {}" MSG_SENDER spender (get-allowance MSG_SENDER spender))
+    
+    ;; (update allowance-table
+    ;;         (get-hash MSG_SENDER spender)
+    ;;         { :allowed amount })
     (emit (approval-event MSG_SENDER spender amount))
     true)
 
   (defn transfer-from [from to amount]
-    (let [allowed (allowance1 from MSG_SENDER)
+    (let [allowed (get-allowance from MSG_SENDER)
           new-amount (- allowed amount)]
       (enforce (>= new-amount 0.0) "Negative Allowance Amount")
       (update allowance-table
@@ -113,16 +116,16 @@
 ;; do payment, simluating SARAH keyset.
 (env-keys ["SARAH"])
 ;; ==> this should error
-(_transfer "Sarah" "James" 20.0)
+;;(_transfer "Sarah" "James" 20.0)
 ;;(_transfer "Sarah" "James" 20.0)
 
 ;; <==
-(transfer-from "Sarah" "James" 25.0)
-(format "Sarah's balance is {}" [(get-balance "Sarah")])
+;; (transfer-from "Sarah" "James" 25.0)
+;; (format "Sarah's balance is {}" [(get-balance "Sarah")])
 
 ;; read James' balance as JAMES
 (env-keys ["JAMES"])
-(format "James's balance is {}" [(get-balance "James")])
+(format "James's balance is {}" [(balance-of "James")])
 
 
 (env-keys ["ADMIN"])
