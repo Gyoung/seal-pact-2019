@@ -284,7 +284,10 @@ langDefs =
      "Obtain hash of current transaction as a string. `(tx-hash)`"
     
     ,defRNative "MSG_SENDER" msgSender (funType tTyString [])
-     "Obtain hash of current transaction as a string. `(tx-hash)`" 
+     "Return the first PublicKey" 
+
+     ,defRNative "MSG_VALUE" msgValue (funType tTyString [])
+     "Return the first PublicKey" 
 
     ,defNative (specialForm Bind) bind
      (funType a [("src",tTyObject row),("binding",TySchema TyBinding row)])
@@ -629,6 +632,9 @@ msgSender :: RNativeFun e
 msgSender _ [] = view eeMsgSigs >>= \ss -> return $ toTerm $ (decodeUtf8 . _pubKey) $ head (S.toList ss)
 msgSender i as = argsError i as
 
+msgValue :: RNativeFun e
+msgValue _ [] = (tStr . asString) <$> view eeHash
+msgValue i as = argsError i as
 
 -- | Change of base for Text-based representations of integrals. Only bases
 -- 2 through 16 are supported, for non-empty text of length <= 128

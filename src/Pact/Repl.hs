@@ -81,7 +81,7 @@ initReplState m = liftIO initPureEvalEnv >>= \e -> return (ReplState e def m def
 initPureEvalEnv :: IO (EvalEnv LibState)
 initPureEvalEnv = do
   mv <- initLibState neverLog >>= newMVar
-  return $ EvalEnv (RefStore nativeDefs mempty) def Null (Just 0) def def mv repldb def initialHash freeGasEnv
+  return $ EvalEnv (RefStore nativeDefs mempty) def Null (Just 0) def def mv repldb def initialHash freeGasEnv 0 --todo init msg.value
 
 
 errToUnit :: Functor f => f (Either e a) -> f (Either () a)
