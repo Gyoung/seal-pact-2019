@@ -18,7 +18,14 @@
 
   ;; (def totalsupply [^decimal totalsupply])
 
-  (def MSG_SENDER "MSG_SENDER")
+  (def MSG_SENDER "Sarah")
+
+  (defn get-keyset [key]
+    (if (= key "Admin")
+      (read-keyset "admin-keyset")
+      (if (= key "Sarah")
+        (read-keyset "sarah-keyset")
+        (read-keyset "james-keyset"))))
 
   (defrecord balances
     [^decimal balance
@@ -46,13 +53,16 @@
   (defn get-allowance [owner spender]
     (with-default-read allowance-table
       (get-hash owner spender)
-      { :allowed 0 }
+      { :allowed -1 }
       { allowed :allowed }
       allowed))
 
-  (defn- _transfer [from to amount]
+  (defn- _transfer [from to amount use-own-key]
     (with-read balances-table from { from-bal :balance , keyset :keyset }
-      (enforce-keyset keyset)
+      (format "balance keyset: {} {}" [from-bal keyset])
+      (if use-own-key
+        (enforce-keyset keyset)
+        (enforce (= keyset 'admin-keyset) "Not Authorized"))
       (with-read balances-table to { to-bal :balance }
         (enforce (> amount 0.0) "Negative Transaction Amount")
         (enforce (>= from-bal amount) "Insufficient Funds")
@@ -62,7 +72,7 @@
                 { :balance (+ to-bal amount) })
         (emit (transfer-event from to amount))
         (format "{} paid {} {}" [from to amount]))))
-  
+
   (defn create-account [address initial-balance keyset]
     "Create a new account for ID with INITIAL-BALANCE funds, must be administrator."
     (enforce-keyset 'admin-keyset)
@@ -80,28 +90,33 @@
       balance))
 
   (defn transfer [to amount]
-    (_transfer MSG_SENDER to amount)
-    true)
+    (_transfer MSG_SENDER to amount true))
 
   (defn approve [spender amount]
-    (format "{} allowed {} {}" MSG_SENDER spender (get-allowance MSG_SENDER spender))
-    
-    ;; (update allowance-table
-    ;;         (get-hash MSG_SENDER spender)
-    ;;         { :allowed amount })
+    (enforce-keyset 'admin-keyset) ;; only admin can approve
+    (format "{} allowed {} {}" [MSG_SENDER spender (get-allowance MSG_SENDER spender)])
+    (let [MSG_SENDER "Admin" ;; let MSG_SENDER be Admin
+          allowed (get-allowance MSG_SENDER spender)]
+     (if (= -1 allowed)
+       (insert allowance-table
+               (get-hash MSG_SENDER spender)
+               { :allowed amount, :owner (get-keyset MSG_SENDER), :spender (get-keyset spender) })
+       (update allowance-table
+               (get-hash MSG_SENDER spender)
+               { :allowed (+ allowed amount), :owner (get-keyset MSG_SENDER), :spender (get-keyset spender) })))
+
     (emit (approval-event MSG_SENDER spender amount))
     true)
 
   (defn transfer-from [from to amount]
-    (let [allowed (get-allowance from MSG_SENDER)
+    (let [allowed    (get-allowance from MSG_SENDER)
           new-amount (- allowed amount)]
       (enforce (>= new-amount 0.0) "Negative Allowance Amount")
       (update allowance-table
               (get-hash from MSG_SENDER)
               { :allowed new-amount })
-      (_transfer from to amount)
-      true)
-  )
+      (_transfer from to amount false)
+      true))
 )
 
 ;define table
@@ -112,30 +127,44 @@
 ;create accounts
 (create-account "Sarah" 100.25 (read-keyset "sarah-keyset"))
 (create-account "James" 250.0 (read-keyset "james-keyset"))
+(create-account "Admin" 2000.0 (read-keyset "admin-keyset"))
 
 ;; do payment, simluating SARAH keyset.
 (env-keys ["SARAH"])
+
 ;; ==> this should error
 ;;(_transfer "Sarah" "James" 20.0)
 ;;(_transfer "Sarah" "James" 20.0)
 
 ;; <==
 ;; (transfer-from "Sarah" "James" 25.0)
-;; (format "Sarah's balance is {}" [(get-balance "Sarah")])
+(format "Sarah's balance is {}" [(balance-of "Sarah")])
+(transfer "James" 100.0) ;; MSG_SENDER is Sarah
+(format "Sarah's balance is {}" [(balance-of "Sarah")])
 
 ;; read James' balance as JAMES
 (env-keys ["JAMES"])
+(format "JAMES" [])
 (format "James's balance is {}" [(balance-of "James")])
 
-
 (env-keys ["ADMIN"])
+(format "ADMIN" [])
 (approve "Sarah" 1000.0)
+(format "Admin's balance is {}" [(balance-of "Admin")])
+(format "Sarah's balance is {}" [(balance-of "Sarah")])
+(format "Admin allowed Sarah {}" [(get-allowance "Admin" "Sarah")])
+
 (env-keys ["SARAH"])
+(format "SARAH" [])
 (transfer-from "Admin" "James" 100.0)
 (transfer-from "Admin" "James" 800.0)
-(format "James's balance is {}(Should be 900.0)" [(get-balance "James")])
-(transfer-from "Admin" "James" 800.0) ;; should fail
+;; (transfer-from "Admin" "James" 800.0) ;; should fail
 
-(env-keys ["JAMES"])
-(transfer-from "James" "Admin" 100.0)
-(format "James's balance is {}" [(get-balance "James")])
+(env-keys ["ADMIN"])
+(format "James's balance is {}(Should be 1250.0)" [(balance-of "James")])
+(format "Admin's balance is {}(Should be 1100.0)" [(balance-of "Admin")])
+
+;; (env-keys ["JAMES"])
+;; (format "JAMES" [])
+;; (transfer "Admin" 100.0)
+;; (format "James's balance is {}" [(balance-of "James")])
