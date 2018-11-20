@@ -153,9 +153,9 @@ withDefaultRead :: Term Name -> Compile (Term Name)
 withDefaultRead v = do
   tbl <- term
   key <- term
-  deft <- objectLiteral
+  dfv <- objectLiteral
   bdn <- bindingForm
-  TApp v [tbl, key, deft, bdn] <$> contextInfo
+  TApp v [tbl, key, dfv, bdn] <$> contextInfo
 
 
 app :: Compile (Term Name)

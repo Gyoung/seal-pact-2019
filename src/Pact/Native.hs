@@ -62,6 +62,7 @@ import Pact.Types.Runtime
 import Pact.Parse
 import Pact.Types.Version
 import Pact.Types.Hash
+import qualified Data.Set as S
 
 -- | All production native modules.
 natives :: [NativeModule]
@@ -281,6 +282,9 @@ langDefs =
 
     ,defRNative "tx-hash" txHash (funType tTyString [])
      "Obtain hash of current transaction as a string. `(tx-hash)`"
+    
+    ,defRNative "MSG_SENDER" msgSender (funType tTyString [])
+     "Obtain hash of current transaction as a string. `(tx-hash)`" 
 
     ,defNative (specialForm Bind) bind
      (funType a [("src",tTyObject row),("binding",TySchema TyBinding row)])
@@ -620,6 +624,11 @@ strToInt i as =
 txHash :: RNativeFun e
 txHash _ [] = (tStr . asString) <$> view eeHash
 txHash i as = argsError i as
+
+msgSender :: RNativeFun e
+msgSender _ [] = view eeMsgSigs >>= \ss -> return $ toTerm $ (decodeUtf8 . _pubKey) $ head (S.toList ss)
+msgSender i as = argsError i as
+
 
 -- | Change of base for Text-based representations of integrals. Only bases
 -- 2 through 16 are supported, for non-empty text of length <= 128
