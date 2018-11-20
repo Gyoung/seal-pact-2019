@@ -136,6 +136,7 @@ specialForm = do
     "interface" -> commit >> interface
     "implements" -> commit >> implements
     "with-read" -> commit >> withRead (expToTerm vatom)
+    "with-default-read" -> commit >> withDefaultRead (expToTerm vatom)
     _ -> expected "special form"
 
 expToTerm :: AtomExp Info -> Term Name
@@ -147,6 +148,14 @@ withRead v = do
   key <- term
   bdn <- bindingForm
   TApp v [tbl, key, bdn] <$> contextInfo
+
+withDefaultRead :: Term Name -> Compile (Term Name)
+withDefaultRead v = do
+  tbl <- term
+  key <- term
+  dfv <- objectLiteral
+  bdn <- bindingForm
+  TApp v [tbl, key, dfv, bdn] <$> contextInfo
 
 
 app :: Compile (Term Name)
