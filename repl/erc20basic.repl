@@ -21,9 +21,9 @@
   ;; (def MSG_SENDER "Sarah")
 
   (defn get-keyset [key]
-    (if (= key "Admin")
+    (if (= key "ADMIN")
       (read-keyset "admin-keyset")
-      (if (= key "Sarah")
+      (if (= key "SARAH")
         (read-keyset "sarah-keyset")
         (read-keyset "james-keyset"))))
 
@@ -62,7 +62,7 @@
       (format "balance keyset: {} {}" [from-bal keyset])
       (if use-own-key
         (enforce-keyset keyset)
-        (enforce (= keyset 'admin-keyset) "Not Authorized"))
+        (enforce (= keyset (read-keyset "admin-keyset")) "Not Authorized"))
       (with-read balances-table to { to-bal :balance }
         (enforce (> amount 0.0) "Negative Transaction Amount")
         (enforce (>= from-bal amount) "Insufficient Funds")
@@ -95,8 +95,7 @@
   (defn approve [spender amount]
     (enforce-keyset 'admin-keyset) ;; only admin can approve
     (format "{} allowed {} {}" [(MSG_SENDER) spender (get-allowance (MSG_SENDER) spender)])
-    (let [(MSG_SENDER) "Admin" ;; let (MSG_SENDER) be Admin
-          allowed (get-allowance (MSG_SENDER) spender)]
+    (let [allowed (get-allowance (MSG_SENDER) spender)]
      (if (= -1 allowed)
        (insert allowance-table
                (get-hash (MSG_SENDER) spender)
@@ -125,9 +124,9 @@
 (create-table allowance-table)
 
 ;create accounts
-(create-account "Sarah" 100.25 (read-keyset "sarah-keyset"))
-(create-account "James" 250.0 (read-keyset "james-keyset"))
-(create-account "Admin" 2000.0 (read-keyset "admin-keyset"))
+(create-account "SARAH" 100.25 (read-keyset "sarah-keyset"))
+(create-account "JAMES" 250.0 (read-keyset "james-keyset"))
+(create-account "ADMIN" 2000.0 (read-keyset "admin-keyset"))
 
 ;; do payment, simluating SARAH keyset.
 (env-keys ["SARAH"])
@@ -138,31 +137,31 @@
 
 ;; <==
 ;; (transfer-from "Sarah" "James" 25.0)
-(format "Sarah's balance is {}" [(balance-of "Sarah")])
-(transfer "James" 100.0) ;; (MSG_SENDER) is Sarah
-(format "Sarah's balance is {}" [(balance-of "Sarah")])
+(format "Sarah's balance is {}" [(balance-of "SARAH")])
+(transfer "JAMES" 100.0) ;; (MSG_SENDER) is Sarah
+(format "Sarah's balance is {}" [(balance-of "SARAH")])
 
 ;; read James' balance as JAMES
 (env-keys ["JAMES"])
 (format "JAMES" [])
-(format "James's balance is {}" [(balance-of "James")])
+(format "James's balance is {}" [(balance-of "JAMES")])
 
 (env-keys ["ADMIN"])
 (format "ADMIN" [])
-(approve "Sarah" 1000.0)
-(format "Admin's balance is {}" [(balance-of "Admin")])
-(format "Sarah's balance is {}" [(balance-of "Sarah")])
-(format "Admin allowed Sarah {}" [(get-allowance "Admin" "Sarah")])
+(approve "SARAH" 1000.0)
+(format "Admin's balance is {}" [(balance-of "ADMIN")])
+(format "Sarah's balance is {}" [(balance-of "SARAH")])
+(format "Admin allowed Sarah {}" [(get-allowance "ADMIN" "SARAH")])
 
 (env-keys ["SARAH"])
 (format "SARAH" [])
-(transfer-from "Admin" "James" 100.0)
-(transfer-from "Admin" "James" 800.0)
+(transfer-from "ADMIN" "JAMES" 100.0)
+(transfer-from "ADMIN" "JAMES" 800.0)
 ;; (transfer-from "Admin" "James" 800.0) ;; should fail
 
 (env-keys ["ADMIN"])
-(format "James's balance is {}(Should be 1250.0)" [(balance-of "James")])
-(format "Admin's balance is {}(Should be 1100.0)" [(balance-of "Admin")])
+(format "James's balance is {}(Should be 1250.0)" [(balance-of "JAMES")])
+(format "Admin's balance is {}(Should be 1100.0)" [(balance-of "ADMIN")])
 
 ;; (env-keys ["JAMES"])
 ;; (format "JAMES" [])
