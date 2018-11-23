@@ -129,6 +129,7 @@ specialForm = do
     "bless" -> commit >> bless
     "deftable" -> commit >> deftable
     "defrecord" -> commit >> defschema
+    "defevent" -> commit >> defschema
     "defn" -> commit >> defun PUBLIC
     "defn-" -> commit >> defun PRIVATE
     -- "defpact" -> commit >> defpact

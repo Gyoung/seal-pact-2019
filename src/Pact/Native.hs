@@ -287,7 +287,10 @@ langDefs =
      "Return the first PublicKey" 
 
      ,defRNative "MSG_VALUE" msgValue (funType tTyString [])
-     "Return the first PublicKey" 
+     "Return the msg.value"
+     --funType tTyString [("table",tableTy),("key",tTyString),("object",rowTy)]
+     ,defRNative "emit-event" emitEvent (funType a [("eventName",tTyString ),("object",obj)])
+     "emit event" 
 
     ,defNative (specialForm Bind) bind
      (funType a [("src",tTyObject row),("binding",TySchema TyBinding row)])
@@ -340,6 +343,8 @@ langDefs =
           c = mkTyVar "c" []
           d = mkTyVar "d" []
           row = mkSchemaVar "row"
+          -- rowTy = TySchema TyObject row
+          -- tableTy = TySchema TyTable row
           yieldv = TySchema TyObject (mkSchemaVar "y")
           obj = tTyObject (mkSchemaVar "o")
           listStringA = mkTyVar "a" [TyList (mkTyVar "l" []),TyPrim TyString]
@@ -635,6 +640,13 @@ msgSender i as = argsError i as
 msgValue :: RNativeFun e
 msgValue _ [] = (tStr . asString) <$> view eeHash
 msgValue i as = argsError i as
+
+
+emitEvent :: RNativeFun e
+emitEvent _ [TLitString key,TObject ps _ _] = do
+  sealLog $ SLog key ps
+  return $ toTerm True
+emitEvent i as = argsError i as
 
 -- | Change of base for Text-based representations of integrals. Only bases
 -- 2 through 16 are supported, for non-empty text of length <= 128
