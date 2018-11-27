@@ -16,7 +16,7 @@ References
 [Pact Whitepaper](http://kadena.io/docs/Kadena-PactWhitepaper.pdf)
 
 
-Quick Start: Browser
+Quick Start: Browser 
 ---
 
 The easiest way to try Pact is [in the browser](http://kadena.io/try-pact).
