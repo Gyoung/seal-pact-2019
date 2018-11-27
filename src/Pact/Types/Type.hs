@@ -136,7 +136,8 @@ instance Pretty PrimType where pretty = text . show
 data SchemaType =
   TyTable |
   TyObject |
-  TyBinding
+  TyBinding |
+  TyEvent
   deriving (Eq,Ord,Generic)
 
 instance NFData SchemaType
@@ -144,6 +145,7 @@ instance Show SchemaType where
   show TyTable = unpack tyTable
   show TyObject = unpack tyObject
   show TyBinding = "binding"
+  show TyEvent = "event"
 instance Pretty SchemaType where pretty = text . show
 
 newtype TypeVarName = TypeVarName { _typeVarName :: Text }

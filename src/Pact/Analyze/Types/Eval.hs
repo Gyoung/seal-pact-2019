@@ -48,6 +48,7 @@ import           Pact.Analyze.Translate       (maybeTranslateUserType')
 import           Pact.Analyze.Types           hiding (tableName)
 import qualified Pact.Analyze.Types           as Types
 import           Pact.Analyze.Util
+import           Data.Semigroup (Semigroup)
 
 
 newtype SymbolicSuccess = SymbolicSuccess { successBool :: SBV Bool }

@@ -129,7 +129,7 @@ specialForm = do
     "bless" -> commit >> bless
     "deftable" -> commit >> deftable
     "defrecord" -> commit >> defschema
-    "defevent" -> commit >> defschema
+    "defevent" -> commit >> defevent
     "defn" -> commit >> defun PUBLIC
     "defn-" -> commit >> defun PRIVATE
     -- "defpact" -> commit >> defpact
@@ -274,6 +274,14 @@ defschema = do
   fields <- withList' Brackets $ many arg
   TSchema (TypeName tn) modName m fields <$> contextInfo
 
+defevent :: Compile (Term Name)
+defevent = do
+  modName <- currentModule'
+  tn <- _atomAtom <$> userAtom
+  m <- meta ModelAllowed
+  fields <- withList' Brackets $ many arg
+  TEvent (TypeName tn) modName m fields <$> contextInfo
+
 defun :: DefVisibility -> Compile (Term Name)
 defun visibility = do
   modName <- currentModule'
@@ -317,6 +325,7 @@ moduleForm = do
     TNative {} -> return []
     TConst {} -> return []
     TSchema {} -> return []
+    TEvent {} -> return []
     TTable {} -> return []
     TUse {} -> return []
     TBless {..} -> return [_tBlessed]

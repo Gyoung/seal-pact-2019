@@ -31,7 +31,7 @@
                    [(enforce-keyset keyset)
                    (enforce-keyset 'admin-keyset)])
       balance)
-      (emit-event "testevent" {:key "key1" :name "name"})
+      (emit-event testevent {:key "key1", :name "name"})
       )
 
   (defn pay [from to amount]

@@ -25,6 +25,7 @@ import Control.Monad.Reader ()
 import Control.Monad.State
 import Data.Default
 import Data.Typeable
+import Data.Semigroup (Semigroup)
 
 import Pact.Persist hiding (compileQuery)
 

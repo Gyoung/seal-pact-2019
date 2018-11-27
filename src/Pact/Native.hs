@@ -289,7 +289,7 @@ langDefs =
      ,defRNative "MSG_VALUE" msgValue (funType tTyString [])
      "Return the msg.value"
      --funType tTyString [("table",tableTy),("key",tTyString),("object",rowTy)]
-     ,defRNative "emit-event" emitEvent (funType a [("eventName",tTyString ),("object",obj)])
+     ,defRNative "emit-event" emitEvent (funType tTyString [("event",eventTy ),("object",obj)])
      "emit event" 
 
     ,defNative (specialForm Bind) bind
@@ -343,8 +343,9 @@ langDefs =
           c = mkTyVar "c" []
           d = mkTyVar "d" []
           row = mkSchemaVar "row"
+          -- tyEvent = mkSchemaVar "event"
           -- rowTy = TySchema TyObject row
-          -- tableTy = TySchema TyTable row
+          eventTy = TySchema TyEvent obj
           yieldv = TySchema TyObject (mkSchemaVar "y")
           obj = tTyObject (mkSchemaVar "o")
           listStringA = mkTyVar "a" [TyList (mkTyVar "l" []),TyPrim TyString]
@@ -641,11 +642,14 @@ msgValue :: RNativeFun e
 msgValue _ [] = (tStr . asString) <$> view eeHash
 msgValue i as = argsError i as
 
+eventText :: Text
+eventText = "text"
 
 emitEvent :: RNativeFun e
-emitEvent _ [TLitString key,TObject ps _ _] = do
-  sealLog $ SLog key ps
-  return $ toTerm True
+emitEvent i [tv@TEvent {..},TObject ps _ _] = do
+  sealLog $ SLog _tEventName ps
+  void $ checkUserType False (_faInfo i) ps (TyUser tv)
+  return $ toTerm eventText
 emitEvent i as = argsError i as
 
 -- | Change of base for Text-based representations of integrals. Only bases

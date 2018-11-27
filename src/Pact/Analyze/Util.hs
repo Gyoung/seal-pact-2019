@@ -13,6 +13,7 @@ import qualified Data.Default         as Default
 import qualified Data.Foldable        as Foldable
 import           Pact.Types.Lang      (Info (_iInfo), Parsed)
 import           Pact.Types.Typecheck (AST (_aNode), Node (_aId), _tiInfo)
+import           Data.Semigroup (Semigroup)
 
 (<$$>) :: (Functor f, Functor g) => (a -> b) -> f (g a) -> f (g b)
 (<$$>) = fmap . fmap

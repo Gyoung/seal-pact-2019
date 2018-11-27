@@ -63,6 +63,7 @@ import Pact.Types.Lang
 import Pact.Types.Orphans ()
 import Pact.Types.Persistence
 import Pact.Types.Util
+import Data.Semigroup (Semigroup)
 
 
 data StackFrame = StackFrame {
@@ -227,7 +228,7 @@ updateRefStore RefState {..}
 -- newtype Tag = Tag Text deriving (Show)
 
 data SLog = SLog {
-   _tag :: Text 
+   _tag :: TypeName 
  , _pair :: [(Term Name, Term Name)]
   } deriving (Show)
 
