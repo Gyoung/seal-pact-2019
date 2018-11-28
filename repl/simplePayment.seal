@@ -25,13 +25,13 @@
 
   (defn get-balance [id]
     "Only users or admin can read balance."
+    (emit-event testevent {:key "key1", :name "name"})
     (with-read payments-table id
       { balance :balance, keyset :keyset }
       (enforce-one "Access denied"
                    [(enforce-keyset keyset)
                    (enforce-keyset 'admin-keyset)])
       balance)
-      (emit-event testevent {:key "key1", :name "name"})
       )
 
   (defn pay [from to amount]

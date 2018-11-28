@@ -63,7 +63,6 @@ import Pact.Types.Lang
 import Pact.Types.Orphans ()
 import Pact.Types.Persistence
 import Pact.Types.Util
-import Data.Semigroup (Semigroup)
 
 
 data StackFrame = StackFrame {

@@ -642,14 +642,12 @@ msgValue :: RNativeFun e
 msgValue _ [] = (tStr . asString) <$> view eeHash
 msgValue i as = argsError i as
 
-eventText :: Text
-eventText = "text"
 
 emitEvent :: RNativeFun e
 emitEvent i [tv@TEvent {..},TObject ps _ _] = do
   sealLog $ SLog _tEventName ps
   void $ checkUserType False (_faInfo i) ps (TyUser tv)
-  return $ toTerm eventText
+  return $ toTerm $ "emit-event " <> asString _tEventName
 emitEvent i as = argsError i as
 
 -- | Change of base for Text-based representations of integrals. Only bases
