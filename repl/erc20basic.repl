@@ -31,9 +31,8 @@
     [^decimal balance
      ^keyset keyset])
 
-  (defn emit [evt] true)
-  (defn transfer-event [from to amount] true)
-  (defn approval-event [from to amount] true)
+  (defevent transfer-event [^string from ^string to ^decimal amount])
+  (defevent approval-event [^string from ^string to ^decimal amount])
 
   ;; use owner as id
   (deftable balances-table ^{balances})
@@ -70,7 +69,7 @@
                 { :balance (- from-bal amount) })
         (update balances-table to
                 { :balance (+ to-bal amount) })
-        (emit (transfer-event from to amount))
+        (emit-event transfer-event {:from from :to to :amount amount})
         (format "{} paid {} {}" [from to amount]))))
 
   (defn create-account [address initial-balance keyset]
@@ -78,7 +77,7 @@
     (enforce-keyset 'admin-keyset)
     (enforce (>= initial-balance 0.0) "Initial balances must be >= 0.")
     (insert balances-table address
-            { :balance initial-balance, :keyset keyset }))
+            { :balance initial-balance :keyset keyset }))
 
   (defn balance-of [id]
     "Only users or admin can read balance."
@@ -104,7 +103,7 @@
                (get-hash (MSG_SENDER) spender)
                { :allowed (+ allowed amount), :owner (get-keyset (MSG_SENDER)), :spender (get-keyset spender) })))
 
-    (emit (approval-event (MSG_SENDER) spender amount))
+    (emit-event approval-event {:from (MSG_SENDER) :to spender :amount amount})
     true)
 
   (defn transfer-from [from to amount]
