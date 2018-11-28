@@ -28,6 +28,7 @@ import Pact.Persist
 import Pact.Types.SQLite
 import Pact.Types.Util (AsString(..))
 import Pact.Types.Logger hiding (Logging (..))
+import Universum ((<>))
 
 
 data TableStmts = TableStmts

@@ -32,6 +32,7 @@ import Pact.Native.Internal
 import Pact.Types.Runtime
 
 import Pact.Eval
+import Universum ((<>))
 
 
 modDef :: NativeDef

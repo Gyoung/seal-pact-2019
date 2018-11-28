@@ -63,6 +63,7 @@ import Pact.Parse
 import Pact.Types.Version
 import Pact.Types.Hash
 import qualified Data.Set as S
+import Universum ((<>))
 
 -- | All production native modules.
 natives :: [NativeModule]

@@ -25,6 +25,7 @@ import qualified Pact.Types.Persistence     as Pact
 
 import           Pact.Analyze.Model.Graph   (linearize)
 import           Pact.Analyze.Types
+import Universum ((<>))
 
 indent1 :: Text -> Text
 indent1 = ("  " <>)

@@ -53,6 +53,7 @@ import           Pact.Analyze.Orphans        ()
 import           Pact.Analyze.Types
 import           Pact.Analyze.Types.Eval
 import           Pact.Analyze.Util
+import Universum ((<>))
 
 
 newtype Analyze a

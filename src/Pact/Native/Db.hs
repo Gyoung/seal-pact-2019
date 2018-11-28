@@ -35,6 +35,7 @@ import qualified Data.HashSet as HS
 
 import Pact.Types.Runtime
 import Pact.Native.Internal
+import Universum ((<>))
 
 
 class Readable a where

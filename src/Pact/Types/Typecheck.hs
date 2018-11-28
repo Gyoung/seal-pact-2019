@@ -52,6 +52,7 @@ import qualified Text.PrettyPrint.ANSI.Leijen as PP
 
 import Pact.Types.Lang
 import Pact.Types.Native
+import Universum ((<>))
 
 
 data CheckerException = CheckerException Info String deriving (Eq,Ord)

@@ -94,6 +94,8 @@ import Pact.Types.Util
 import Pact.Types.Info
 import Pact.Types.Type
 import Pact.Types.Exp
+-- import Data.Semigroup (Semigroup)
+import Universum ((<>))
 
 
 
@@ -189,6 +191,7 @@ instance Semigroup Gas where
 
 instance Monoid Gas where
   mempty = 0
+  mappend = (<>)
 
 data NativeDFun = NativeDFun {
       _nativeName :: NativeDefName,

@@ -63,6 +63,7 @@ import qualified Data.Set as S
 import Pact.Types.Exp
 import Pact.Types.Runtime (PactError(..),PactErrorType(..))
 import Pact.Types.Info
+import Universum ((<>))
 
 -- | Exp stream type.
 data Cursor = Cursor

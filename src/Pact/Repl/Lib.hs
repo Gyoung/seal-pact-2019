@@ -56,6 +56,7 @@ import Pact.Persist.Pure
 import Pact.PersistPactDb
 import Pact.Types.Logger
 import Pact.Repl.Types
+import Universum ((<>))
 
 
 initLibState :: Loggers -> IO LibState

@@ -42,6 +42,7 @@ import Pact.Types.Logger
 import Pact.Server.ApiServer
 import Pact.Server.History.Service
 import Pact.Server.PactService
+import Universum ((<>))
 
 data Config = Config {
   _port :: Word16,

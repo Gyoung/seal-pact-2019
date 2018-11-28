@@ -26,6 +26,7 @@ import Pact.Types.Command
 import Pact.Types.Server
 import Pact.Server.History.Types
 import Pact.Server.History.Persistence as DB
+import Universum ((<>))
 
 initHistoryEnv
   :: HistoryChannel

@@ -13,6 +13,8 @@ import qualified Data.Default         as Default
 import qualified Data.Foldable        as Foldable
 import           Pact.Types.Lang      (Info (_iInfo), Parsed)
 import           Pact.Types.Typecheck (AST (_aNode), Node (_aId), _tiInfo)
+import Data.Semigroup (Semigroup)
+import Universum ((<>))
 
 (<$$>) :: (Functor f, Functor g) => (a -> b) -> f (g a) -> f (g b)
 (<$$>) = fmap . fmap
@@ -75,6 +77,7 @@ instance Semigroup (SnocList a) where
 
 instance Monoid (SnocList a) where
   mempty = SnocList []
+  mappend = (<>)
 
 pattern ConsList :: [a] -> SnocList a
 pattern ConsList xs <- SnocList (reverse -> xs)

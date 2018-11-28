@@ -25,6 +25,8 @@ import Data.Hashable
 import Data.Typeable
 
 import Pact.Types.Runtime
+import Universum ((<>))
+import Data.Semigroup (Semigroup)
 
 type Persist s a = s -> IO (s,a)
 
@@ -95,7 +97,7 @@ kOr :: KeyQuery k -> KeyQuery k -> KeyQuery k
 kOr l r = KQConj l OR r
 
 -- | Compile an optional 'KeyQuery' to standard SQL statement syntax with param values list.
-compileQuery :: (IsString s, Monoid s) => s -> Maybe (KeyQuery k) -> (s,[k])
+compileQuery :: (IsString s, Semigroup s) => s -> Maybe (KeyQuery k) -> (s,[k])
 compileQuery _ Nothing = ("",[])
 compileQuery keyfield (Just kq) = ("WHERE " <> qs,pms)
   where (qs,pms) = compile True kq

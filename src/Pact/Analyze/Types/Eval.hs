@@ -48,6 +48,9 @@ import           Pact.Analyze.Translate       (maybeTranslateUserType')
 import           Pact.Analyze.Types           hiding (tableName)
 import qualified Pact.Analyze.Types           as Types
 import           Pact.Analyze.Util
+import Data.Semigroup (Semigroup)
+import Universum ((<>))
+
 
 
 newtype SymbolicSuccess = SymbolicSuccess { successBool :: SBV Bool }
@@ -144,6 +147,7 @@ instance Semigroup Constraints where
 
 instance Monoid Constraints where
   mempty = Constraints (pure ())
+  mappend = (<>)
 
 data SymbolicCells
   = SymbolicCells

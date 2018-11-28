@@ -26,6 +26,7 @@ import Data.Yaml as Y
 import qualified Data.Text as T
 
 import Pact.Types.Util
+import Universum((<>))
 
 newtype LogName = LogName String
   deriving (Eq,Show,Ord,Hashable,IsString,AsString,ToJSON,FromJSON)

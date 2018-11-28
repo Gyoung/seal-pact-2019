@@ -37,6 +37,8 @@ import Control.DeepSeq
 
 import Pact.Types.Orphans ()
 import Pact.Types.Util
+import Data.Semigroup (Semigroup)
+import Universum ((<>))
 
 --import Pact.Types.Crypto (Hash(..))
 
