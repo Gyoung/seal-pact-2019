@@ -77,7 +77,7 @@
     (enforce-keyset 'admin-keyset)
     (enforce (>= initial-balance 0.0) "Initial balances must be >= 0.")
     (insert balances-table address
-            { :balance initial-balance :keyset keyset }))
+            { :balance initial-balance, :keyset keyset }))
 
   (defn balance-of [id]
     "Only users or admin can read balance."
