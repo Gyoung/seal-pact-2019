@@ -264,7 +264,7 @@ instance Semigroup a => Semigroup (Eval e a) where
 
 instance Monoid a => Monoid (Eval e a) where
   mempty = pure mempty
-  mappend = undefined
+  mappend = undefined  --todo fixed undefined -Gyoung 2018.11.28 
 
 -- | "Production" runEval throws exceptions, meaning the state can be lost,
 -- which is useful for reporting stack traces in the REPL.
