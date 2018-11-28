@@ -45,7 +45,7 @@ module Pact.Types.Term
    tAppArgs,tAppFun,tBindBody,tBindPairs,tBindType,tBlessed,tConstArg,tConstVal,
    tDefBody,tDefName,tDefType,tMeta,tFields,tFunTypes,tFunType,tHash,tInfo,tKeySet,
    tListType,tList,tLiteral,tModuleBody,tModuleDef,tModuleName,tModuleHash,tModule,
-   tNativeDocs,tNativeFun,tNativeName,tNativeTopLevelOnly,tObjectType,tObject,tSchemaName,
+   tNativeDocs,tNativeFun,tNativeName,tNativeTopLevelOnly,tObjectType,tObject,tSchemaName,tEventName,
    tStepEntity,tStepExec,tStepRollback,tTableName,tTableType,tValue,tVar,tInterfaceName,tVisibility,
    ToTerm(..),
    toTermList,toTObject,toTList,
@@ -86,6 +86,7 @@ import qualified Data.HashSet as HS
 import qualified Data.HashMap.Strict as HM
 import Data.Int (Int64)
 import Data.Serialize (Serialize)
+import Data.Semigroup (Semigroup)
 
 
 import Pact.Types.Parser
@@ -93,6 +94,7 @@ import Pact.Types.Util
 import Pact.Types.Info
 import Pact.Types.Type
 import Pact.Types.Exp
+
 
 
 data Meta = Meta
@@ -180,6 +182,7 @@ instance Show Ref where
 newtype Gas = Gas Int64
   deriving (Eq,Ord,Num,Real,Integral,Enum)
 instance Show Gas where show (Gas g) = show g
+
 
 instance Semigroup Gas where
   (Gas a) <> (Gas b) = Gas $ a + b
@@ -389,6 +392,13 @@ data Term n =
     , _tFields :: ![Arg (Term n)]
     , _tInfo :: !Info
     } |
+    TEvent {
+      _tEventName :: !TypeName
+    , _tModule :: !ModuleName
+    , _tMeta :: !Meta
+    , _tFields :: ![Arg (Term n)]
+    , _tInfo :: !Info
+    } |
     TLiteral {
       _tLiteral :: !Literal
     , _tInfo :: !Info
@@ -457,6 +467,9 @@ instance Show n => Show (Term n) where
     show TSchema {..} =
       "(TSchema " ++ asString' _tModule ++ "." ++ asString' _tSchemaName ++ " " ++
       show _tFields ++ " " ++ show _tMeta ++ ")"
+    show TEvent {..} =
+      "(TEvent " ++ asString' _tModule ++ "." ++ asString' _tEventName ++ " " ++
+      show _tFields ++ " " ++ show _tMeta ++ ")"
     show TTable {..} =
       "(TTable " ++ asString' _tModule ++ "." ++ asString' _tTableName ++ ":" ++ show _tTableType
       ++ " " ++ show _tMeta ++ ")"
@@ -501,6 +514,8 @@ instance Eq1 Term where
     liftEq (liftEq eq) a m && liftEq eq b n && liftEq (liftEq eq) c o && d == p
   liftEq eq (TSchema a b c d e) (TSchema m n o p q) =
     a == m && b == n && c == o && liftEq (liftEq (liftEq eq)) d p && e == q
+  liftEq eq (TEvent a b c d e) (TEvent m n o p q) =
+    a == m && b == n && c == o && liftEq (liftEq (liftEq eq)) d p && e == q
   liftEq eq (TTable a b c d e f) (TTable m n o p q r) =
     a == m && b == n && c == o && liftEq (liftEq eq) d p && e == q && f == r
   liftEq _ (TImplements ifs mn i) (TImplements ifs' mn' i') = ifs == ifs' && mn == mn' && i == i'
@@ -529,6 +544,7 @@ instance Monad Term where
     TValue v i >>= _ = TValue v i
     TStep ent e r i >>= f = TStep (fmap (>>= f) ent) (e >>= f) (fmap (>>= f) r) i
     TSchema {..} >>= f = TSchema _tSchemaName _tModule _tMeta (fmap (fmap (>>= f)) _tFields) _tInfo
+    TEvent {..} >>= f = TEvent _tEventName _tModule _tMeta (fmap (fmap (>>= f)) _tFields) _tInfo
     TTable {..} >>= f = TTable _tTableName _tModule _tHash (fmap (>>= f) _tTableType) _tMeta _tInfo
     TImplements ifs mn i >>= _ = TImplements ifs mn i 
 
@@ -599,6 +615,7 @@ typeof t = case t of
       TValue {} -> Right $ TyPrim TyValue
       TStep {} -> Left "step"
       TSchema {..} -> Left $ "defobject:" <> asString _tSchemaName
+      TEvent {..} -> Left $ "defobject:" <> asString _tEventName
       TTable {..} -> Right $ TySchema TyTable _tTableType
       TImplements{} -> Left "implements"
 {-# INLINE typeof #-}
@@ -636,6 +653,7 @@ termEq (TKeySet a _) (TKeySet b _) = a == b
 termEq (TValue a _) (TValue b _) = a == b
 termEq (TTable a b c d x _) (TTable e f g h y _) = a == e && b == f && c == g && d == h && x == y
 termEq (TSchema a b c d _) (TSchema e f g h _) = a == e && b == f && c == g && d == h
+termEq (TEvent a b c d _) (TEvent e f g h _) = a == e && b == f && c == g && d == h
 termEq _ _ = False
 
 
@@ -661,6 +679,7 @@ abbrev (TVar s _) = show s
 abbrev (TValue v _) = show v
 abbrev TStep {} = "<step>"
 abbrev TSchema {..} = "<defrecord " ++ asString' _tSchemaName ++ ">"
+abbrev TEvent {..} = "<defevent " ++ asString' _tEventName ++ ">"
 abbrev TTable {..} = "<deftable " ++ asString' _tTableName ++ ">"
 abbrev TImplements{..} = "<implements " ++ show _tInterfaceName ++ ">"
 

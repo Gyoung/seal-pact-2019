@@ -28,9 +28,9 @@ module Pact.Types.Runtime
    StackFrame(..),sfName,sfLoc,sfApp,
    PactExec(..),peStepCount,peYield,peExecuted,pePactId,peStep,
    RefState(..),rsLoaded,rsLoadedModules,rsNewModules,
-   EvalState(..),evalRefs,evalCallStack,evalPactExec,evalGas,
+   EvalState(..),evalRefs,evalCallStack,evalPactExec,evalGas,evealLogs,
    Eval(..),runEval,runEval',
-   call,method,
+   call,method,sealLog,SLog(..),
    readRow,writeRow,keys,txids,createUserTable,getUserTableInfo,beginTx,commitTx,rollbackTx,getTxLog,
    KeyPredBuiltins(..),keyPredBuiltins,
    module Pact.Types.Lang,
@@ -224,6 +224,13 @@ updateRefStore RefState {..}
   | HM.null _rsNewModules = id
   | otherwise = over rsModules (HM.union _rsNewModules)
 
+-- newtype Tag = Tag Text deriving (Show)
+
+data SLog = SLog {
+   _tag :: TypeName 
+ , _pair :: [(Term Name, Term Name)]
+  } deriving (Show)
+
 -- | Interpreter mutable state.
 data EvalState = EvalState {
       -- | New or imported modules and defs.
@@ -234,9 +241,14 @@ data EvalState = EvalState {
     , _evalPactExec :: !(Maybe PactExec)
       -- | Gas tally
     , _evalGas :: Gas
+    , _evealLogs :: ![SLog]
     } deriving (Show)
 makeLenses ''EvalState
-instance Default EvalState where def = EvalState def def def 0
+instance Default EvalState where def = EvalState def def def 0 def
+
+sealLog :: SLog -> Eval e()
+sealLog l = do
+  evealLogs %= (l:)
 
 -- | Interpreter monad, parameterized over back-end MVar state type.
 newtype Eval e a =

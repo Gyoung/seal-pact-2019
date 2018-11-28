@@ -675,6 +675,8 @@ toAST :: Term (Either Ref (AST Node)) -> TC (AST Node)
 toAST TNative {..} = die _tInfo "Native in value position"
 toAST TDef {..} = die _tInfo "Def in value position"
 toAST TSchema {..} = die _tInfo "User type in value position"
+toAST TEvent {..} = die _tInfo "User type in value position"
+
 
 toAST (TVar v i) = case v of -- value position only, TApp has its own resolver
   (Left (Ref r)) -> toAST (fmap Left r)
@@ -803,6 +805,7 @@ toUserType t = case t of
 
 toUserType' :: Show n => Term (Either Ref n) -> TC UserType
 toUserType' TSchema {..} = Schema _tSchemaName _tModule <$> mapM (traverse toUserType) _tFields <*> pure _tInfo
+toUserType' TEvent {..} = Schema _tEventName _tModule <$> mapM (traverse toUserType) _tFields <*> pure _tInfo
 toUserType' t = die (_tInfo t) $ "toUserType: expected user type: " ++ show t
 
 bindArgs :: Info -> [a] -> Int -> TC a
@@ -827,6 +830,9 @@ mkTop t@TTable {..} = do
     traverse toUserType _tTableType <*> pure _tMeta
 mkTop t@TSchema {..} = do
   debug $ "===== Schema: " ++ abbrev t
+  TopUserType _tInfo <$> toUserType' t <*> pure (_mDocs _tMeta)
+mkTop t@TEvent {..} = do
+  debug $ "===== Event: " ++ abbrev t
   TopUserType _tInfo <$> toUserType' t <*> pure (_mDocs _tMeta)
 mkTop t = die (_tInfo t) $ "Invalid top-level term: " ++ abbrev t
 

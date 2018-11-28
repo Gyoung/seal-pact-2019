@@ -6,7 +6,14 @@
     [^decimal balance
     ^keyset keyset])
 
+  (defevent testevent
+    [^string key
+    ^string name])
+
   (deftable payments-table ^{payments})
+
+  ;;(deftable payments-table2 ^{testevent})
+
 
   (defn create-account [id initial-balance keyset]
     "Create a new account for ID with INITIAL-BALANCE funds, must be administrator."
@@ -18,12 +25,14 @@
 
   (defn get-balance [id]
     "Only users or admin can read balance."
+    (emit-event testevent {:key "key1", :name "name"})
     (with-read payments-table id
       { balance :balance, keyset :keyset }
       (enforce-one "Access denied"
                    [(enforce-keyset keyset)
                    (enforce-keyset 'admin-keyset)])
-      balance))
+      balance)
+      )
 
   (defn pay [from to amount]
     (with-read payments-table from { from-bal :balance , keyset :keyset }

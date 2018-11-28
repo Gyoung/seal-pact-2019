@@ -204,6 +204,7 @@ loadModule m@Module{..} bod1 mi g0 = do
                 TDef {..} -> return $ Just _tDefName
                 TConst {..} -> return $ Just $ _aName _tConstArg
                 TSchema {..} -> return $ Just $ asString _tSchemaName
+                TEvent {..} -> return $ Just $ asString _tEventName
                 TTable {..} -> return $ Just $ asString _tTableName
                 TUse {..} -> evalUse _tModuleName _tModuleHash _tInfo >> return Nothing
                 TBless {..} -> return Nothing
@@ -231,6 +232,7 @@ loadModule i@Interface{..} body info gas0 = do
               TDef {..} -> return $ Just _tDefName
               TConst {..} -> return $ Just $ _aName _tConstArg
               TSchema {..} -> return $ Just $ asString _tSchemaName
+              TEvent {..} -> return $ Just $ asString _tEventName
               TUse {..} -> evalUse _tModuleName _tModuleHash _tInfo >> return Nothing
               _ -> evalError (_tInfo t) "Invalid interface member"
             case dnm of
@@ -398,6 +400,7 @@ reduce t@TUse {} = evalError (_tInfo t) "Use only allowed at top level"
 reduce t@TBless {} = evalError (_tInfo t) "Bless only allowed at top level"
 reduce t@TStep {} = evalError (_tInfo t) "Step at invalid location"
 reduce TSchema {..} = TSchema _tSchemaName _tModule _tMeta <$> traverse (traverse reduce) _tFields <*> pure _tInfo
+reduce TEvent {..} = TEvent _tEventName _tModule _tMeta <$> traverse (traverse reduce) _tFields <*> pure _tInfo
 reduce TTable {..} = TTable _tTableName _tModule _tHash <$> mapM reduce _tTableType <*> pure _tMeta <*> pure _tInfo
 reduce t@TImplements{} = evalError (_tInfo t) "Interface implementations only allowed at top level"
 
@@ -611,6 +614,22 @@ checkUserType total i ps (TyUser tu@TSchema {..}) = do
     let missing = M.difference uty (M.fromList (map (first _aName) aps))
     unless (M.null missing) $ evalError i $
       "Missing fields for {" ++ unpack (asString _tSchemaName) ++ "}: " ++ show (M.elems missing)
+  typecheck aps
+  return $ TySchema TyObject (TyUser tu)
+checkUserType total i ps (TyUser tu@TEvent {..}) = do
+  let uty = M.fromList . map (_aName &&& id) $ _tFields
+  aps <- forM ps $ \(k,v) -> case k of
+    TLitString ks -> case M.lookup ks uty of
+      Nothing -> evalError i $ "Invalid field for {" ++ unpack (asString _tEventName) ++ "}: " ++ show ks
+      Just a -> return (a,v)
+    TLitKeyword ks -> case M.lookup ks uty of
+      Nothing -> evalError i $ "Invalid field for {" ++ unpack (asString _tEventName) ++ "}: " ++ show ks
+      Just a -> return (a,v)
+    t -> evalError i $ "Invalid object, non-String key found: " ++ show t
+  when total $ do
+    let missing = M.difference uty (M.fromList (map (first _aName) aps))
+    unless (M.null missing) $ evalError i $
+      "Missing fields for {" ++ unpack (asString _tEventName) ++ "}: " ++ show (M.elems missing)
   typecheck aps
   return $ TySchema TyObject (TyUser tu)
 checkUserType _ i _ t = evalError i $ "Invalid reference in user type: " ++ show t
