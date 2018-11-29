@@ -11,6 +11,7 @@ import qualified Pact.Types.Persistence as Pact
 import           Pact.Types.Lang        (Info, tShow)
 
 import           Pact.Analyze.Types
+import Universum ((<>))
 
 data AnalyzeFailureNoLoc
   = AtHasNoRelevantFields EType Schema

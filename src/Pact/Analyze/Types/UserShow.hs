@@ -11,6 +11,7 @@ import qualified Data.Text       as T
 import           Pact.Types.Exp  (Exp)
 import           Pact.Types.Info (Info)
 import           Pact.Types.Util (tShow)
+import Universum ((<>))
 
 class UserShow a where
   userShowsPrec :: Int -> a -> Text

@@ -56,6 +56,7 @@ import Control.Compactable (traverseMaybe)
 import Pact.Types.Typecheck
 import Pact.Types.Runtime
 import Pact.Types.Native
+import Universum ((<>))
 
 die :: MonadThrow m => Info -> String -> m a
 die i s = throwM $ CheckerException i s

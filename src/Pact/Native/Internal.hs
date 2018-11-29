@@ -27,7 +27,6 @@ module Pact.Native.Internal
   ,tTyInteger,tTyDecimal,tTyTime,tTyBool,tTyString,tTyValue,tTyKeySet,tTyObject
   ,colsToList
   ,module Pact.Gas
-  ,(<>)
   ) where
 
 import Control.Monad

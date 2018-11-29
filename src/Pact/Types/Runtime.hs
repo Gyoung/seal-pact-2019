@@ -63,6 +63,9 @@ import Pact.Types.Lang
 import Pact.Types.Orphans ()
 import Pact.Types.Persistence
 import Pact.Types.Util
+import Data.Semigroup (Semigroup)
+import Universum ((<>))
+
 
 
 data StackFrame = StackFrame {
@@ -256,11 +259,14 @@ newtype Eval e a =
     deriving (Functor,Applicative,Monad,MonadState EvalState,
                      MonadReader (EvalEnv e),MonadThrow,MonadCatch,MonadIO)
 
+                   
+
 instance Semigroup a => Semigroup (Eval e a) where
   (<>) = liftA2 (<>)
 
 instance Monoid a => Monoid (Eval e a) where
   mempty = pure mempty
+  mappend = mappend  --todo code review? -Gyoung 2018.11.28
 
 -- | "Production" runEval throws exceptions, meaning the state can be lost,
 -- which is useful for reporting stack traces in the REPL.

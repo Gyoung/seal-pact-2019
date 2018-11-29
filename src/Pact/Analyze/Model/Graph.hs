@@ -18,6 +18,7 @@ import           Data.Set           (Set)
 import qualified Data.Set           as Set
 
 import           Pact.Analyze.Types
+import Universum ((<>))
 
 linearize :: Model 'Concrete -> ExecutionTrace
 linearize model = go traceEvents

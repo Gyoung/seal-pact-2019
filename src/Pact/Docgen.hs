@@ -36,6 +36,7 @@ import           Pact.Repl
 import           Pact.Repl.Lib
 import           Pact.Repl.Types
 import           Pact.Types.Lang
+import Universum ((<>))
 
 main :: IO ()
 main = do

@@ -85,6 +85,7 @@ import           Pact.Analyze.Parse        (expToCheck, expToInvariant,
 import           Pact.Analyze.Translate
 import           Pact.Analyze.Types
 import           Pact.Analyze.Util
+import Universum ((<>))
 
 
 newtype VerificationWarnings = VerificationWarnings [Text]

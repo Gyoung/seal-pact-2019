@@ -54,6 +54,7 @@ import Pact.Types.Logger
 import Pact.Repl.Types
 import Pact.Types.Hash
 import Pact.Gas
+import Universum ((<>))
 
 -- | for use in GHCI
 repl :: IO (Either () (Term Name))

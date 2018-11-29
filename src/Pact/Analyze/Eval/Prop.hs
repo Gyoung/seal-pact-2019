@@ -29,6 +29,7 @@ import           Pact.Analyze.Types         hiding (tableName)
 import qualified Pact.Analyze.Types         as Types
 import           Pact.Analyze.Types.Eval
 import           Pact.Analyze.Util
+import Universum ((<>))
 
 
 --

@@ -53,6 +53,7 @@ import           Pact.Analyze.Feature       hiding (TyVar, Var, col, obj, str,
 import           Pact.Analyze.Patterns
 import           Pact.Analyze.Types
 import           Pact.Analyze.Util
+import Universum ((<>))
 
 -- * Translation types
 

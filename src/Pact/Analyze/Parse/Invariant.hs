@@ -20,6 +20,7 @@ import           Pact.Analyze.Feature     hiding (Type, Var, ks, obj, str)
 import           Pact.Analyze.Parse.Types
 import           Pact.Analyze.Types
 import           Pact.Analyze.Util
+import Universum ((<>))
 
 expToInvariant :: Type a -> Exp Info -> InvariantParse (Invariant a)
 expToInvariant ty exp = case (ty, exp) of

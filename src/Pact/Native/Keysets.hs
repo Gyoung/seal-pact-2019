@@ -19,6 +19,7 @@ import Prelude
 import Pact.Eval
 import Pact.Native.Internal
 import Pact.Types.Runtime
+import Universum ((<>))
 
 readKeysetDef :: NativeDef
 readKeysetDef =

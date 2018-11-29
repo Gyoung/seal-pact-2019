@@ -60,7 +60,8 @@ import           Pact.Analyze.Feature         hiding (Type, dec, ks, obj, time)
 import           Pact.Analyze.Orphans         ()
 import           Pact.Analyze.Types.Numerical
 import           Pact.Analyze.Types.UserShow
-
+import Data.Semigroup (Semigroup)
+import Universum ((<>))
 
 data Located a
   = Located

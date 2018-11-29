@@ -29,6 +29,7 @@ import Data.AffineSpace
 
 import Pact.Types.Runtime
 import Pact.Native.Internal
+import Universum ((<>))
 
 
 timedoc :: Text

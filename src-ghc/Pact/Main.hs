@@ -49,6 +49,7 @@ import Pact.ReplTools
 import Pact.Repl.Types
 import Pact.Types.Version
 import Pact.ApiReq
+import Universum ((<>))
 
 
 data Option =

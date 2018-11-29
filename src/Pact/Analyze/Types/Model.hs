@@ -20,6 +20,8 @@ import           Pact.Types.Persistence    (WriteType)
 import qualified Pact.Types.Typecheck      as TC
 
 import           Pact.Analyze.Types.Shared
+import Data.Semigroup (Semigroup)
+import Universum ((<>))
 
 -- | An argument to a function
 data Arg = Arg

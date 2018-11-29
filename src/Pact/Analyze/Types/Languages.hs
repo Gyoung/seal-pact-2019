@@ -65,6 +65,7 @@ import           Pact.Analyze.Types.Numerical
 import           Pact.Analyze.Types.Shared
 import           Pact.Analyze.Types.UserShow
 import           Pact.Analyze.Util
+import Universum ((<>))
 
 #define EQ_EXISTENTIAL(tm)                                \
 instance Eq (Existential tm) where                        \

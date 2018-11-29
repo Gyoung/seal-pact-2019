@@ -45,6 +45,7 @@ import Data.Maybe
 import Pact.Types.Runtime
 import Pact.Persist as P
 import Pact.Types.Logger
+import Universum ((<>))
 
 -- | Environment/MVar variable for pactdb impl.
 data DbEnv p = DbEnv

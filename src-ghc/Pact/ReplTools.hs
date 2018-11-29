@@ -27,6 +27,7 @@ import Pact.Types.Runtime
 import Pact.Native
 import Pact.Repl
 import Pact.Repl.Types
+import Universum ((<>))
 
 ------------------------------------------------------------------------------
 -- Moved from Pact.Repl

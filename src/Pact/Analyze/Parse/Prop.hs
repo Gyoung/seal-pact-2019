@@ -62,6 +62,7 @@ import           Pact.Analyze.Parse.Types
 import           Pact.Analyze.PrenexNormalize
 import           Pact.Analyze.Types
 import           Pact.Analyze.Util
+import Universum ((<>))
 
 
 parseTableName :: PreProp -> PropCheck (Prop TableName)
