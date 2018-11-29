@@ -53,7 +53,7 @@
        ^decimal availableSegments
        ^decimal currPrice
        ^string admin ;; the main account of income
-       ^string ownerKey ;; key of owner table record, (+ infoHash owner)
+       ;; ^string ownerKey ;; key of owner table record, (+ infoHash owner)
        ])
 
   (deftable realestate-table ^{realestate}) ;; key: ^string infoHash
@@ -80,18 +80,33 @@
     (enforce-keyset admin-keyset)
     (update realestate-table infoHash {:currPrice newPrice}))
 
+  (defn upsert-add [table key field amount]
+    (with-default-read table key {field -1} {old-amount field}
+      (if (= -1 old-amount)
+        (insert table key {field amount})
+        (update table key {field (+ amount old-amount)}))))
+
+  (defn- get-hash [owner spender]
+    (hash [owner spender]))
+
   (defn buy-segments [infoHash buyer buySegments]
+    (enforce (>= buySegments 300) "Invalid BuySegments")
     (with-read realestate-table infoHash
       {currPrice :currPrice
        availableSegments :availableSegments
        admin :admin
-       ownerKey :ownerKey}
-      (enforce (and (>= buySegments 300)
-                    (>= availableSegments buySegments))
-               "not valid buySegments or insufficient availableSegments")
+       ;; ownerKey :ownerKey
+       }
+      (enforce (>= availableSegments buySegments) "Insufficient AvailableSegments")
       (let [cost (* currPrice buySegments)]
         (_transfer buyer admin cost))
-      (insert owner-table ownerKey {:buyer buySegments})))
+      (let [ownerKey (get-hash infoHash buyer)]
+       (upsert-add owner-table ownerKey :segments buySegments))))
+
+  (defn segments-of [infoHash owner]
+    (with-read owner-table (get-hash infoHash owner)
+      {segments :segments}
+      segments))
 
   (defn dividend [infoHash from amount]
     (enforce (= from admin))
