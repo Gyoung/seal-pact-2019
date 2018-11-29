@@ -16,9 +16,8 @@
 ;define smart-contract code
 (defcontract erc20contract 'admin-keyset
 
-  ;; (def totalsupply [^decimal totalsupply])
-
-  ;; (def MSG_SENDER "Sarah")
+  (defevent transfer-event [^string from ^string to ^decimal amount])
+  (defevent approval-event [^string from ^string to ^decimal amount])
 
   (defn get-keyset [key]
     (if (= key "ADMIN")
@@ -30,9 +29,6 @@
   (defrecord balances
     [^decimal balance
      ^keyset keyset])
-
-  (defevent transfer-event [^string from ^string to ^decimal amount])
-  (defevent approval-event [^string from ^string to ^decimal amount])
 
   ;; use owner as id
   (deftable balances-table ^{balances})
