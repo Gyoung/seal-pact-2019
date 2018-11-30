@@ -14,6 +14,8 @@ import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import Control.Monad
 import Data.Foldable
 import qualified Data.Text as T
+import Universum ((<>))
+
 
 spec :: Spec
 spec = do

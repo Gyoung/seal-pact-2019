@@ -232,6 +232,8 @@ test-suite hspec
               , hedgehog == 0.6.*
               , hw-hspec-hedgehog == 0.1.*
               , intervals
+              , universum
+              
   if !impl(ghcjs)
     build-depends:
         neat-interpolation
