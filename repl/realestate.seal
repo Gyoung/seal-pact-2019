@@ -92,14 +92,17 @@
         {shares :shares}
         shares)))
 
+  (defn dividend-one [per-share id]
+    (with-read
+      stakeholder-table id
+      {id :id owner :owner shares :shares}
+      (if (= id (get-hash token-id me))
+        (send owner (MSG_SENDER) (* per-share shares)))))
+  
   (defn dividend [token-id per-share]
     (with-read realestate-table token-id
       {total-shares :total-shares}
       (let [per-share (/ amount total-shares)]
-        (for-each-row
-         stakeholder-table
-         {id :id owner :owner shares :shares}
-         (if (= id (get-hash token-id me))
-           (send owner (MSG_SENDER) (* per-share shares)))))))
+        (map (dividend-one per-share) (keys stakeholder-table)))))
 
   )
