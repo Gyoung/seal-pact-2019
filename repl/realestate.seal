@@ -94,7 +94,7 @@
 
   (defn dividend-one [per-share id]
     (with-read
-      stakeholder-table
+      stakeholder-table id
       {id :id owner :owner shares :shares}
       (if (= id (get-hash token-id me))
         (send owner (MSG_SENDER) (* per-share shares)))))
