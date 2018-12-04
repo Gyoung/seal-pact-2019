@@ -263,31 +263,31 @@ select' i as _ _ _ = argsError' i as
 
 
 
-forEachRow :: NativeFun e
-forEachRow i as@[tbl@TTable {},b@(TBinding ps bd (BindSchema _) _)] = do
-    g0 <- computeGas (Right i) $ GUnreduced as
-    guardTable i tbl
-    let fi = _faInfo i
-        tblTy = _tTableType tbl
-    ks <- keys fi (userTable' tbl)
-    fmap (second (\b -> TList (reverse b) tblTy def)) $ (\f -> foldM f (g0,[]) ks) $ \(gPrev,rs) k -> do
-      mrow <- readRow fi (userTable tbl) k
-      case mrow of
-        Nothing -> evalError fi $ "select: unexpected error, key not found in select: " ++ show k ++ ", table: " ++ show tbl
-        Just row -> do
-          void $ bindToRow ps bd b row
-          g <- gasPostRead i gPrev row
-          fmap (g,) $ (row:rs)
-          -- let obj = columnsToObject tblTy row
-          -- result <- apply' app [obj]
-          -- fmap (g,) $ case result of
-          --   (TLiteral (LBool include) _)
-          --     | include -> case cols' of
-          --         Nothing -> return (obj:rs)
-          --         Just cols -> (:rs) <$> columnsToObject' tblTy cols row
-          --     | otherwise -> return rs
-          --   t -> evalError (_tInfo app) $ "select: filter returned non-boolean value: " ++ show t
-forEachRow i as = argsError' i as
+-- forEachRow :: NativeFun e
+-- forEachRow i as@[tbl@TTable {},b@(TBinding ps bd (BindSchema _) _)] = do
+--     g0 <- computeGas (Right i) $ GUnreduced as
+--     guardTable i tbl
+--     let fi = _faInfo i
+--         tblTy = _tTableType tbl
+--     ks <- keys fi (userTable' tbl)
+--     fmap (second (\b -> TList (reverse b) tblTy def)) $ (\f -> foldM f (g0,[]) ks) $ \(gPrev,rs) k -> do
+--       mrow <- readRow fi (userTable tbl) k
+--       case mrow of
+--         Nothing -> evalError fi $ "select: unexpected error, key not found in select: " ++ show k ++ ", table: " ++ show tbl
+--         Just row -> do
+--           void $ bindToRow ps bd b row
+--           g <- gasPostRead i gPrev row
+--           fmap (g,) $ (row:rs)
+--           -- let obj = columnsToObject tblTy row
+--           -- result <- apply' app [obj]
+--           -- fmap (g,) $ case result of
+--           --   (TLiteral (LBool include) _)
+--           --     | include -> case cols' of
+--           --         Nothing -> return (obj:rs)
+--           --         Just cols -> (:rs) <$> columnsToObject' tblTy cols row
+--           --     | otherwise -> return rs
+--           --   t -> evalError (_tInfo app) $ "select: filter returned non-boolean value: " ++ show t
+-- forEachRow i as = argsError' i as
 
 
 withDefaultRead :: NativeFun e
