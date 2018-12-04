@@ -87,6 +87,12 @@ dbDefs =
      "Read row from TABLE for KEY, returning database record object, or just COLUMNS if specified. \
      \`$(read accounts id ['balance 'ccy])`"
 
+    --  ,defNative ("for-each-row") forEachRow
+    --  (funType a [("table",tableTy),("bindings",bindTy)])
+    --  "Special form to read row from TABLE for KEY and bind columns per BINDINGS over subsequent body statements.\
+    --  \`$(with-read accounts id { \"balance\":= bal, \"ccy\":= ccy }\n \
+    --  \  (format \"Balance for {} is {} {}\" [id bal ccy]))`"
+
     ,defNative (specialForm Select) select
       (funType (TyList rowTy)  [("table",tableTy),("where",TyFun $ funType' tTyBool [("row",rowTy)])] <>
        funType (TyList rowTy)  [("table",tableTy),("columns",TyList tTyString),("where",TyFun $ funType' tTyBool [("row",rowTy)])])
@@ -256,6 +262,34 @@ select' i _ cols' app@TApp{} tbl@TTable{} = do
 select' i as _ _ _ = argsError' i as
 
 
+
+forEachRow :: NativeFun e
+forEachRow i as@[tbl@TTable {},b@(TBinding ps bd (BindSchema _) _)] = do
+    g0 <- computeGas (Right i) $ GUnreduced as
+    guardTable i tbl
+    let fi = _faInfo i
+        tblTy = _tTableType tbl
+    ks <- keys fi (userTable' tbl)
+    fmap (second (\b -> TList (reverse b) tblTy def)) $ (\f -> foldM f (g0,[]) ks) $ \(gPrev,rs) k -> do
+      mrow <- readRow fi (userTable tbl) k
+      case mrow of
+        Nothing -> evalError fi $ "select: unexpected error, key not found in select: " ++ show k ++ ", table: " ++ show tbl
+        Just row -> do
+          void $ bindToRow ps bd b row
+          g <- gasPostRead i gPrev row
+          fmap (g,) $ (row:rs)
+          -- let obj = columnsToObject tblTy row
+          -- result <- apply' app [obj]
+          -- fmap (g,) $ case result of
+          --   (TLiteral (LBool include) _)
+          --     | include -> case cols' of
+          --         Nothing -> return (obj:rs)
+          --         Just cols -> (:rs) <$> columnsToObject' tblTy cols row
+          --     | otherwise -> return rs
+          --   t -> evalError (_tInfo app) $ "select: filter returned non-boolean value: " ++ show t
+forEachRow i as = argsError' i as
+
+
 withDefaultRead :: NativeFun e
 withDefaultRead fi as@[table',key',defaultRow',b@(TBinding ps bd (BindSchema _) _)] = do
   (!g0,!tkd) <- preGas fi [table',key',defaultRow']
@@ -281,6 +315,34 @@ withRead fi as@[table',key',b@(TBinding ps bd (BindSchema _) _)] = do
         (Just row) -> gasPostRead' fi g0 row $ bindToRow ps bd b row
     _ -> argsError' fi as
 withRead fi as = argsError' fi as
+
+-- forEachRow :: NativeFun e
+-- forEachRow fi as@[table',b@(TBinding ps bd (BindSchema _) _)] = do
+--   (!g0,!tk) <- preGas fi [table']
+--   case tk of
+--     [table@TTable {..}] -> do
+--       guardTable fi table
+--       tKyes <- keys (_faInfo fi) (userTable' table)
+--       feacthTable tKyes fi as
+--     _ -> argsError' fi as
+-- forEachRow fi as = argsError' fi as
+
+-- forEachRow :: NativeFun e
+-- forEachRow fi as@[table@TTable {..},b@(TBinding ps bd (BindSchema _) _)] = do
+--     guardTable fi table
+--     tKyes <- keys (_faInfo fi) (userTable' table)
+--     feacthTable tKyes fi as
+-- forEachRow fi as = argsError' fi as
+
+-- fetchTable :: [RowKey] -> FunApp -> [Term Ref] -> Eval e (Gas, Term Name)
+-- fetchTable (k:ks) fi as@[table@TTable {..},b@(TBinding ps bd (BindSchema _) _)] = do
+--    mrow <- readRow (_faInfo fi) (userTable table) k
+--    case mrow of
+--     Nothing -> failTx (_faInfo fi) $ "with-read: row not found: " ++ show k
+--     (Just row) -> gasPostRead' fi 0 row $ bindToRow ps bd b row
+--   --  fetchTable ks fi as
+-- fetchTable [] fi as@[table@TTable {..},b@(TBinding ps bd (BindSchema _) _)] = undefined
+-- fetchTable _ fi as = argsError' fi as
 
 bindToRow :: [(Arg (Term Ref),Term Ref)] ->
              Scope Int Term Ref -> Term Ref -> Columns Persistable -> Eval e (Term Name)
