@@ -116,13 +116,13 @@
        (insert allowance-table
                (get-hash owner spender)
                { :allowed amount
-                , :owner (get-keyset owner)
-                , :spender (get-keyset spender) })
+                , :owner owner
+                , :spender spender })
        (update allowance-table
                (get-hash owner spender)
                { :allowed (+ allowed amount)
-                , :owner (get-keyset owner)
-                , :spender (get-keyset spender) }))))
+                , :owner owner
+                , :spender spender}))))
 
   (defn dividend-one [per-share cfo id]
     (with-read
@@ -138,10 +138,17 @@
         (map (dividend-one per-share cfo) (keys stakeholder-table)))))
 
   (defn claim-income [token-id]
-    (with-read realestate-table token-id
-      {cfo :cfo}
-      (let [allowed (get-allowance cfo (MSG_SENDER))]
-        (if (not= -1 allowed)
-          (send (MSG_SENDER) cfo allowed)))))
+    (let [me (MSG_SENDER)]
+     (with-read realestate-table token-id
+       {cfo :cfo}
+       (let [allowed (get-allowance cfo me)]
+         (if (not= -1 allowed)
+           (send (MSG_SENDER) cfo allowed))
+         (if (not= -1 allowed)
+           (update allowance-table
+                   (get-hash cfo me)
+                   { :allowed 0
+                    , :owner owner
+                    , :spender spender }))))))
 
 )
