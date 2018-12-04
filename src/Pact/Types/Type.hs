@@ -23,7 +23,7 @@ module Pact.Types.Type
    FunTypes,funTypes,showFunTypes,
    PrimType(..),
    tyInteger,tyDecimal,tyTime,tyBool,tyString,
-   tyList,tyObject,tyValue,tyKeySet,tyTable,
+   tyList,tyObject,tyValue,tyKeySet,tyTable,tyAddress,
    SchemaType(..),
    TypeVarName(..),typeVarName,
    TypeVar(..),tvName,tvConstraint,
@@ -111,7 +111,7 @@ data PrimType =
 instance NFData PrimType
 
 
-tyInteger,tyDecimal,tyTime,tyBool,tyString,tyList,tyObject,tyValue,tyKeySet,tyTable :: Text
+tyInteger,tyDecimal,tyTime,tyBool,tyString,tyList,tyObject,tyValue,tyKeySet,tyTable,tyAddress :: Text
 tyInteger = "integer"
 tyDecimal = "decimal"
 tyTime = "time"
@@ -122,6 +122,7 @@ tyObject = "object"
 tyValue = "value"
 tyKeySet = "keyset"
 tyTable = "table"
+tyAddress = "address"
 
 instance Show PrimType where
   show TyInteger = unpack tyInteger
