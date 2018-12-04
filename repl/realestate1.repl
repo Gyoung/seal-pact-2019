@@ -110,14 +110,17 @@
     "Do the hello-world dance"
     "111")
 
-  (defn dividend [token-id per-share amount]
+  (defn dividend-one [per-share id]
+    (with-read
+      stakeholder-table id
+      {owner :owner, shares :shares}
+      (if (= id (hash id))
+        (send owner (MSG_SENDER) (* per-share shares)))))
+  
+  (defn dividend [token-id amount]
     (with-read realestate-table token-id
       {total-shares :total-shares}
       (let [per-share (/ amount total-shares)]
-        (select
-         stakeholder-table
-         {owner :owner, shares :shares}
-         (if (= id (get-hash token-id me))
-           (send owner (MSG_SENDER) (* per-share shares)))))))
+        (map (dividend-one per-share) (keys stakeholder-table)))))         
 
   )
