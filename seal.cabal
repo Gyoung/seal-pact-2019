@@ -32,6 +32,7 @@ library
                      , Pact.PersistPactDb
                      , Pact.Persist
                      , Pact.Persist.Pure
+                     , Pact.Persist.MPTree
                      , Pact.Repl
                      , Pact.Repl.Lib
                      , Pact.Repl.Types
