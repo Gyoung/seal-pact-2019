@@ -33,6 +33,8 @@ import qualified Pact.Persist.SQLite as PSL
 import System.Directory
 import Pact.Types.Logger
 import qualified Pact.Persist.Pure as Pure
+import qualified Pact.Persist.MPTree as MP
+
 
 data PactDbEnv e = PactDbEnv {
   pdPactDb :: !(PactDb e),
@@ -104,6 +106,10 @@ mkSQLiteEnv initLog deleteOldFile c loggers = do
 
 mkPureEnv :: Loggers -> IO (PactDbEnv (DbEnv Pure.PureDb))
 mkPureEnv loggers = mkPactDbEnv pactdb $ initDbEnv loggers Pure.persister Pure.initPureDb
+
+mkMPtreeEnv :: Loggers -> IO (PactDbEnv (DbEnv MP.MPtreeDb))
+mkMPtreeEnv loggers = mkPactDbEnv pactdb $ initDbEnv loggers MP.persister MP.initMPtreeDb
+
 
 mkPactDbEnv :: PactDb e -> e -> IO (PactDbEnv e)
 mkPactDbEnv pdb p = PactDbEnv pdb <$> newMVar p

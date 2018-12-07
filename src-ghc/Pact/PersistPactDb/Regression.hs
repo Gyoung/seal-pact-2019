@@ -4,7 +4,8 @@ module Pact.PersistPactDb.Regression
   (DbEnv(..),
    initDbEnv,
    runRegression,
-   regressPure) where
+   regressPure,
+   regressMPtree) where
 
 import Control.Concurrent.MVar
 import Control.Exception
@@ -18,6 +19,8 @@ import Data.Aeson
 import Pact.Types.Logger
 import qualified Pact.Types.Hash as H
 import Data.Default (def)
+import qualified Pact.Persist.MPTree as MP
+
 
 
 runRegression :: DbEnv p -> IO (MVar (DbEnv p))
@@ -111,4 +114,10 @@ assertEquals' msg a b = assertEquals msg a =<< b
 regressPure :: IO (MVar (DbEnv PureDb))
 regressPure = do
   let e = initDbEnv alwaysLog persister initPureDb
+  runRegression e
+
+
+regressMPtree :: IO (MVar (DbEnv MP.MPtreeDb))
+regressMPtree = do
+  let e = initDbEnv alwaysLog MP.persister MP.initMPtreeDb
   runRegression e

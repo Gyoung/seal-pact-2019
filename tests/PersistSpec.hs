@@ -10,6 +10,7 @@ import Pact.Types.Logger
 spec :: Spec
 spec = do
   it "regress Pure" (void regressPure)
+  it "regress MPtree" (void regressMPtree)
   it "regress SQLite" regressSQLite
 
 

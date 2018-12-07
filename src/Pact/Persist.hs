@@ -122,6 +122,9 @@ instance PactValue Module
 instance PactValue KeySet
 instance PactValue Value
 
+-- type Persist s a = s -> IO (s,a)
+
+
 data Persister s = Persister {
   createTable :: forall k . PactKey k => Table k -> Persist s ()
   ,

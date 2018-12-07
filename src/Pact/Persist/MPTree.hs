@@ -14,7 +14,7 @@ module Pact.Persist.MPTree
     Tables(..),tbls,tblType,
     Db(..),dataTables,
     MPtreeDb(..),committed,temp,
-    initPureDb,
+    initMPtreeDb,
     persister
   ) where
 
@@ -61,8 +61,8 @@ data MPtreeDb = MPtreeDb {
 makeLenses ''MPtreeDb
 instance Default MPtreeDb where def = MPtreeDb def def
 
-initPureDb :: MPtreeDb
-initPureDb = def
+initMPtreeDb :: MPtreeDb
+initMPtreeDb = def
 
 overM :: s -> Lens' s a -> (a -> IO a) -> IO s
 overM s l f = f (view l s) >>= \a -> return (set l a s)
@@ -75,11 +75,14 @@ persister = Persister {
       Nothing -> return (M.insert t mempty ts)
       Just _ -> throwDbError $ "createTable: already exists: " ++ show t
   ,
-  beginTx = \_ s -> return $ (,()) $ set temp (_committed s) s
+--   beginTx = \_ s -> return $ (,()) $ set temp (_committed s) s
+  beginTx = \_ s -> beginTx_ s
   ,
-  commitTx = \s -> return $ (,()) $ set committed (_temp s) s
+--   commitTx = \s -> return $ (,()) $ set committed (_temp s) s
+  commitTx = \s -> commitTx_ s
   ,
-  rollbackTx = \s -> return $ (,()) $ set temp (_committed s) s
+--   rollbackTx = \s -> return $ (,()) $ set temp (_committed s) s
+  rollbackTx = \s -> rollbackTx_ s
   ,
   queryKeys = \t kq s -> (s,) . map fst <$> qry t kq s
   ,
@@ -97,6 +100,24 @@ persister = Persister {
   refreshConn = return . (,())
   }
 
+beginTx_ :: MPtreeDb -> IO (MPtreeDb,())
+beginTx_ s = do
+    let p = set temp (_committed s) s
+    return $ (,()) $ p
+
+-- todo commit map to MPTree
+commitTx_ :: MPtreeDb -> IO (MPtreeDb,())
+commitTx_ s = do 
+    let p = set committed (_temp s) s
+    return $ (,()) $ p 
+
+-- todo clean the map
+rollbackTx_ :: MPtreeDb -> IO (MPtreeDb,())
+rollbackTx_ s = do
+    let p = set temp (_committed s) s
+    return $ (,()) $ p
+
+--queryKeys 先从map里面查，再从mptree里面查？
 
 compileQuery :: PactKey k => Maybe (KeyQuery k) -> (k -> Bool)
 compileQuery Nothing = const True
