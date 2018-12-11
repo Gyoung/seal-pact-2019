@@ -153,6 +153,9 @@ library
                      , vector-space >= 0.10.4 && < 0.14
                      , mmorph >= 1.1 && < 1.2
                      , universum
+                     , cardano-sl-db
+                     , cardano-sl-binary
+
 
   if !impl(ghcjs)
     build-depends:
