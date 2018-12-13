@@ -64,9 +64,13 @@ instance Default PureDb where def = PureDb def def
 
 initPureDb :: PureDb
 initPureDb = def
-
+-- temp . tblType t . tbls  取出s中的某个值执行函数，再放回去
 overM :: s -> Lens' s a -> (a -> IO a) -> IO s
-overM s l f = f (view l s) >>= \a -> return (set l a s)
+overM s l f = do
+  let aa = view l s
+  c <- f aa
+  return $ set l c s
+  -- f (view l s) >>= \a -> return (set l a s)
 {-# INLINE overM #-}
 
 persister :: Persister PureDb

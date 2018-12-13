@@ -155,6 +155,8 @@ library
                      , universum
                      , cardano-sl-db
                      , cardano-sl-binary
+                     , cardano-sl-util
+                     , nibblestring
 
 
   if !impl(ghcjs)
