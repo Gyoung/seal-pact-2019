@@ -47,6 +47,7 @@ import Data.Text.Encoding
 import           Data.Hashable (Hashable)
 
 
+
 -- import Universum((<>))
 
 
@@ -144,22 +145,21 @@ baseLookupM _ = undefined
 --table key 
 --通过table从tables中找出table
 --通过key从table中找出value
-readValue_ :: (PactKey k, PactValue v) => Table k -> k -> MPtreeDb -> IO (Maybe v)
+--类型转换 MPVal->PValue
+readValue_ :: (PactKey k, PactValue v) => Table k -> k -> MPtreeDb -> IO (MPtreeDb,(Maybe v))
 readValue_ t k s = do
-  let tables = _tbls . _temp $ s
-  table <- MM.lookup baseLookupM t tables
-  case table of 
-    --
-    Nothing -> throwDbError $ "writeValue: no such table: "
-    Just t -> do
-      let tbl = _tbl t --table
-      vv <- MM.lookup baseLookupM k tbl
-      case vv of 
-        Nothing -> throwDbError $ "writeValue: no such table: "
-        Just v ->  return v 
-  return table
-
-
+  --获取tables
+  -- let tables = _tbls . _dataTables . _temp $ s
+  let tables = view (temp . tblType t . tbls) s
+  --通过key，获取对应的value
+  --value没有，zai
+  pv <- case MM.lookup baseLookup t tables of 
+          Nothing -> throwDbError $ "writeValue: no such table: "
+          Just v  -> case MM.lookup baseLookup k (_tbl v) of 
+            Nothing -> throwDbError $ "writeValue: no such table: "
+            Just vv -> return vv
+  v <- conv $ pv
+  return $ (s,) $ (Just v)
 
 
 tableMPKey :: Table k -> MPKey

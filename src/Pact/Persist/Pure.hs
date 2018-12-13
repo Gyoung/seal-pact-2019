@@ -90,7 +90,9 @@ persister = Persister {
   ,
   query = \t kq s -> fmap (s,) $ qry t kq s >>= mapM (\(k,v) -> (k,) <$> conv v)
   ,
-  readValue = \t k s -> fmap (s,) $ traverse conv $ firstOf (temp . tblType t . tbls . ix t . tbl . ix k) s
+  readValue = \t k s -> do
+    let vv = firstOf (temp . tblType t . tbls . ix t . tbl . ix k) s 
+    fmap (s,) $ traverse conv $ vv
   ,
   writeValue = \t wt k v s -> fmap (,()) $ overM s (temp . tblType t . tbls) $ \ts -> case M.lookup t ts of
       Nothing -> throwDbError $ "writeValue: no such table: " ++ show t
