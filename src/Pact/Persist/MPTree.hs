@@ -170,16 +170,18 @@ readFromMPtree :: (PactKey k) => Table k -> k -> MPtreeDb -> IO PValue
 readFromMPtree t k s = do
   let mpval = tableKey2MPKey t
   -- Maybe MPVal --MPVal 2 MpKey
-  tid <- getTableStateRoot mpval (_stateRootTree s)
+  tid <- getMPtreeValue mpval (_stateRootTree s)
   kva <- case tid of 
            Nothing -> throwDbError $ "readValue: no such table: " ++ show t 
            Just ta -> do
-             tval <- getTableStateRoot (pactKey2MPKey k) (mpVal2StateRoot ta)
+             tval <- getMPtreeValue (pactKey2MPKey k) (mpVal2StateRoot ta)
              case tval of 
                Nothing -> throwDbError $ "readValue: no value at  key: " ++ show k 
                Just va -> return va
   return $ mpVal2PValue kva           
-      
+
+-- instance PactValue MPVal
+  
 mpVal2PValue :: MPVal -> PValue
 mpVal2PValue p = undefined
 
@@ -228,9 +230,56 @@ beginTx_ :: MPtreeDb -> IO (MPtreeDb,())
 --     return $ (,()) $ p
 beginTx_ s = return $ (,()) $ s
 
+tablesSchema :: [(Table DataKey,Tbl DataKey)]
+tablesSchema = []
+
 -- todo commit map to MPTree  /tables  /table->k,v
 commitTx_ :: MPtreeDb -> IO (MPtreeDb,())
-commitTx_ s = undefined
+commitTx_ s = do
+  let tables = _tbls . _dataTables . _temp $ s
+  let    ls  = MM.toList tablesSchema tables
+  root <- setMptreeTables ls (_stateRootTree s)
+  -- 更新最外层StateRoot
+  let ss = set stateRootTree root s
+  return $ (,()) $ ss
+
+tableSchema :: [(DataKey,PValue)]
+tableSchema = []
+
+--将tables插入mptree
+setMptreeTables :: [(Table DataKey,Tbl DataKey)] -> StateRoot -> IO StateRoot
+setMptreeTables ((k,v):xs) st = do
+  let mpKey = tableKey2MPKey k
+  let values = MM.toList tableSchema (_tbl v)
+  tid <- getMPtreeValue mpKey st
+  tsr <- case tid of 
+    Nothing -> setMPtreeValues values emptyTriePtr
+    Just tv -> setMPtreeValues values (mpVal2StateRoot tv)
+  nst <- setMPtreeValue mpKey (stateRoot2MPval tsr) st
+  setMptreeTables xs nst
+setMptreeTables [] st = return st
+
+
+-- 将modifyer中的值插入table mptree
+setMPtreeValues :: [(DataKey,PValue)] -> StateRoot -> IO StateRoot
+setMPtreeValues ((k,v):xs) st = do
+  let mpKey = dataKey2MPKey k
+  let mpVal = pValue2MPVal v
+  rs <- setMPtreeValue mpKey mpVal st
+  --更新stateroot
+  setMPtreeValues xs rs
+setMPtreeValues [] st = return st  
+
+dataKey2MPKey :: DataKey -> MPKey
+dataKey2MPKey key = undefined
+
+pValue2MPVal :: PValue -> MPVal
+pValue2MPVal val = undefined
+
+
+
+
+
   -- do 
 --     let db = _tbls . _dataTables . _temp $ s
 --     -- let keys = M.keys db
@@ -258,6 +307,9 @@ commitTx_ s = undefined
 --     -- let p = set committed (_temp s) s
 --     return $ (,()) $ s 
 
+stateRoot2MPval :: StateRoot -> MPVal
+stateRoot2MPval root = undefined
+
 transMaybeMPVal :: Maybe MPVal -> MPVal
 transMaybeMPVal Nothing = ""
 transMaybeMPVal (Just v) = v
@@ -267,24 +319,23 @@ rollbackTx_ :: MPtreeDb -> IO (MPtreeDb,())
 rollbackTx_ s = 
   return $ (,()) $ MPtreeDb def (_stateRootTree s)
 
---从tables中获取table
-getTableStateRoot ::(MonadIO m,MonadFail m)=> MPKey -> StateRoot -> m (Maybe MPVal)
-getTableStateRoot key sr = do
+-- MPtree中获取值
+getMPtreeValue ::(MonadIO m,MonadFail m)=> MPKey -> StateRoot -> m (Maybe MPVal)
+getMPtreeValue key sr = do
   nodedbs <- openRocksDB "/seal/contract"
   let mpdb' = MPDB {rdb=nodedbs,stateRoot=sr}
   v <- getKeyVal mpdb' key
   return $ v
 
--- 更新tables树中table key value
-setTableStateRoot :: MPKey -> MPVal -> ()
-setTableStateRoot k v = undefined
-  -- do
-  -- nodedbs <- openRocksDB "/seal/contract"
-  -- let mpdb' = MPDB {rdb=nodedbs,stateRoot=(head tablesStateRoot)}
-  -- -- mp <- putKeyVal mpdb' k v
-  -- void $ putKeyVal mpdb' k v
-  -- todo 更新tables stateRoot
-  -- (stateRoot mp) : tablesStateRoot 
+-- MPtree中插入新的值
+setMPtreeValue :: MPKey -> MPVal -> StateRoot -> IO StateRoot
+setMPtreeValue k v root = do
+  nodedbs <- openRocksDB "/seal/contract"
+  let mpdb' = MPDB {rdb=nodedbs,stateRoot=root}
+  -- mp <- putKeyVal mpdb' k v
+  st <- putKeyVal mpdb' k v
+  return $ stateRoot st
+
 
 -- 将table value存入具体的table数中   todo 更新tables树索引
 addTableValue :: [(MPKey, MPVal)] -> StateRoot -> StateRoot
