@@ -135,11 +135,11 @@ persister = Persister {
   }
 
 baseLookup :: (Eq k, Hashable k) => k -> Maybe v
-baseLookup _ = undefined
+baseLookup _ = Nothing
 
 --todo 从mpTree中读取数据
 baseLookupM :: (Applicative m, Eq k, Hashable k) => k -> m (Maybe v)
-baseLookupM _ = undefined
+baseLookupM _ = pure Nothing
 
 --先从modifyer中读取，没有，则从mptree中读取
 --table key 
@@ -154,16 +154,43 @@ readValue_ t k s = do
   --通过key，获取对应的value
   --value没有，zai
   pv <- case MM.lookup baseLookup t tables of 
-          Nothing -> throwDbError $ "writeValue: no such table: "
+          --从mptree中读取 
+          Nothing -> do
+            mpv <- readFromMPtree t k s
+            return mpv
           Just v  -> case MM.lookup baseLookup k (_tbl v) of 
-            Nothing -> throwDbError $ "writeValue: no such table: "
+            Nothing -> throwDbError $ "readValue: no value at key: " ++ show k
             Just vv -> return vv
   v <- conv $ pv
   return $ (s,) $ (Just v)
 
+--从mptree中读取数据
+-- table k, k -> maybe v
+readFromMPtree :: (PactKey k) => Table k -> k -> MPtreeDb -> IO PValue
+readFromMPtree t k s = do
+  let mpval = tableKey2MPKey t
+  -- Maybe MPVal --MPVal 2 MpKey
+  tid <- getTableStateRoot mpval (_stateRootTree s)
+  kva <- case tid of 
+           Nothing -> throwDbError $ "readValue: no such table: " ++ show t 
+           Just ta -> do
+             tval <- getTableStateRoot (pactKey2MPKey k) (mpVal2StateRoot ta)
+             case tval of 
+               Nothing -> throwDbError $ "readValue: no value at  key: " ++ show k 
+               Just va -> return va
+  return $ mpVal2PValue kva           
+      
+mpVal2PValue :: MPVal -> PValue
+mpVal2PValue p = undefined
 
-tableMPKey :: Table k -> MPKey
-tableMPKey (DataTable t) = byteString2TermNibbleString $ sanitize t
+pactKey2MPKey :: PactKey k => k -> MPKey
+pactKey2MPKey p = undefined
+
+mpVal2StateRoot :: MPVal -> StateRoot
+mpVal2StateRoot v = undefined
+
+tableKey2MPKey :: Table k -> MPKey
+tableKey2MPKey (DataTable t) = byteString2TermNibbleString $ sanitize t
 
 sanitize :: TableId -> B.ByteString
 sanitize (TableId t) = encodeUtf8 t
@@ -171,7 +198,7 @@ sanitize (TableId t) = encodeUtf8 t
 -- 判断mptree中是否有table,没有则创建，同时创建一个modifyer，如果有，则直接创建modifyer
 createTable_ :: (Hashable k) => Table k -> MPtreeDb -> IO (MPtreeDb,())
 -- createTable_ t m = do
---   va <- getTableStateRoot (tableMPKey t) (_stateRootTree m)
+--   va <- getTableStateRoot (tableKey2MPKey t) (_stateRootTree m)
 --   case va  of 
 --     Nothing -> throwDbError $ "writeValue: no such table: "
 --     Just t -> throwDbError $ "writeValue: no such table: "
