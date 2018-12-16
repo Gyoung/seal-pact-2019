@@ -15,8 +15,8 @@ module Pact.Persist.MPTree
     Tbl(..),tbl,
     Tables(..),tbls,
     Db(..),dataTables,
-    -- committed,tblType,
-    stateRootTable,stateRootTree,
+    -- committed,tblType,stateRootTree,
+    stateRootTable,rootMPDB,
     MPtreeDb(..),temp,
     initMPtreeDb,
     persister
@@ -83,13 +83,17 @@ tblType TxTable {} = undefined --todo 是否会有影响
 data MPtreeDb = MPtreeDb {
   -- _committed :: !Db,
   _temp :: !Db,
-  _stateRootTree :: StateRoot
+  _rootMPDB :: MPDB           
   }
 makeLenses ''MPtreeDb
-instance Default MPtreeDb where def = MPtreeDb def emptyTriePtr
+-- instance Default MPtreeDb where def = MPtreeDb def emptyTriePtr
 
-initMPtreeDb :: MPtreeDb
-initMPtreeDb = def
+initMPtreeDb :: IO MPtreeDb
+initMPtreeDb = do
+  db <- openRocksDB "/seal/contract"
+  let rdb' = MPDB {rdb=db,stateRoot=emptyTriePtr}
+  initializeBlank rdb'
+  return $ MPtreeDb def rdb'
 
 overM :: s -> Lens' s a -> (a -> IO a) -> IO s
 overM s l f = f (view l s) >>= \a -> return (set l a s)
@@ -170,11 +174,11 @@ readFromMPtree :: (PactKey k) => Table k -> k -> MPtreeDb -> IO PValue
 readFromMPtree t k s = do
   let mpval = tableKey2MPKey t
   -- Maybe MPVal --MPVal 2 MpKey
-  tid <- getMPtreeValue mpval (_stateRootTree s)
+  tid <- getMPtreeValue mpval (_rootMPDB s)
   kva <- case tid of 
            Nothing -> throwDbError $ "readValue: no such table: " ++ show t 
            Just ta -> do
-             tval <- getMPtreeValue (pactKey2MPKey k) (mpVal2StateRoot ta)
+             tval <- getMPtreeValue (pactKey2MPKey k) (mpVal2MPDB ta)
              case tval of 
                Nothing -> throwDbError $ "readValue: no value at  key: " ++ show k 
                Just va -> return va
@@ -188,8 +192,8 @@ mpVal2PValue p = undefined
 pactKey2MPKey :: PactKey k => k -> MPKey
 pactKey2MPKey p = undefined
 
-mpVal2StateRoot :: MPVal -> StateRoot
-mpVal2StateRoot v = undefined
+mpVal2MPDB :: MPVal -> MPDB
+mpVal2MPDB v = undefined
 
 tableKey2MPKey :: Table k -> MPKey
 tableKey2MPKey (DataTable t) = byteString2TermNibbleString $ sanitize t
@@ -199,12 +203,6 @@ sanitize (TableId t) = encodeUtf8 t
 
 -- 判断mptree中是否有table,没有则创建，同时创建一个modifyer，如果有，则直接创建modifyer
 createTable_ :: (Hashable k) => Table k -> MPtreeDb -> IO (MPtreeDb,())
--- createTable_ t m = do
---   va <- getTableStateRoot (tableKey2MPKey t) (_stateRootTree m)
---   case va  of 
---     Nothing -> throwDbError $ "writeValue: no such table: "
---     Just t -> throwDbError $ "writeValue: no such table: "
---   return $ (,()) $ m
 -- 直接在mptree中创建table  
 createTable_ t s = fmap (,()) $ overM s (temp . tblType t . tbls) $ \ts -> case MM.lookup baseLookup t ts of
   Nothing -> return (MM.insert t mempty ts)
@@ -238,37 +236,37 @@ commitTx_ :: MPtreeDb -> IO (MPtreeDb,())
 commitTx_ s = do
   let tables = _tbls . _dataTables . _temp $ s
   let    ls  = MM.toList tablesSchema tables
-  root <- setMptreeTables ls (_stateRootTree s)
+  root <- setMptreeTables ls (_rootMPDB s)
   -- 更新最外层StateRoot
-  let ss = set stateRootTree root s
+  let ss = set rootMPDB root s
   return $ (,()) $ ss
 
 tableSchema :: [(DataKey,PValue)]
 tableSchema = []
 
 --将tables插入mptree
-setMptreeTables :: [(Table DataKey,Tbl DataKey)] -> StateRoot -> IO StateRoot
-setMptreeTables ((k,v):xs) st = do
+setMptreeTables :: [(Table DataKey,Tbl DataKey)] -> MPDB -> IO MPDB
+setMptreeTables ((k,v):xs) mpdb = do
   let mpKey = tableKey2MPKey k
   let values = MM.toList tableSchema (_tbl v)
-  tid <- getMPtreeValue mpKey st
+  tid <- getMPtreeValue mpKey mpdb
   tsr <- case tid of 
-    Nothing -> setMPtreeValues values emptyTriePtr
-    Just tv -> setMPtreeValues values (mpVal2StateRoot tv)
-  nst <- setMPtreeValue mpKey (stateRoot2MPval tsr) st
+    Nothing -> setMPtreeValues values (MPDB {rdb=(rdb mpdb),stateRoot=emptyTriePtr})
+    Just tv -> setMPtreeValues values (mpVal2MPDB tv)
+  nst <- setMPtreeValue mpKey (mpdb2MPval tsr) mpdb
   setMptreeTables xs nst
-setMptreeTables [] st = return st
+setMptreeTables [] mpdb = return mpdb
 
 
 -- 将modifyer中的值插入table mptree
-setMPtreeValues :: [(DataKey,PValue)] -> StateRoot -> IO StateRoot
-setMPtreeValues ((k,v):xs) st = do
+setMPtreeValues :: [(DataKey,PValue)] -> MPDB -> IO MPDB
+setMPtreeValues ((k,v):xs) mpdb = do
   let mpKey = dataKey2MPKey k
   let mpVal = pValue2MPVal v
-  rs <- setMPtreeValue mpKey mpVal st
+  rs <- setMPtreeValue mpKey mpVal mpdb
   --更新stateroot
   setMPtreeValues xs rs
-setMPtreeValues [] st = return st  
+setMPtreeValues [] mpdb = return mpdb  
 
 dataKey2MPKey :: DataKey -> MPKey
 dataKey2MPKey key = undefined
@@ -276,39 +274,8 @@ dataKey2MPKey key = undefined
 pValue2MPVal :: PValue -> MPVal
 pValue2MPVal val = undefined
 
-
-
-
-
-  -- do 
---     let db = _tbls . _dataTables . _temp $ s
---     -- let keys = M.keys db
---     -- k:table value:map
---     st <- forM db $ \(k,v) -> case getTableStateRoot k of 
---        --tables中不存在table,新增
---        Nothing -> addTableValue (M.toList v) emptyTriePtr
---        --tables中存在table,更新 MPVal -> StateRoot
---        Just t -> addTableValue (M.toList v) (StateRoot $ transMaybeMPVal t) 
---     -- map (\(k,v) -> case getTableStateRoot k of 
---     --   --tables中不存在table,新增
---     --   Nothing -> addTableValue (M.toList v) emptyTriePtr
---     --   --tables中存在table,更新 MPVal -> StateRoot
---     --   Just t -> addTableValue (M.toList v) (StateRoot $ transMaybeMPVal t) 
---     --     ) db
---     -- map (\k->case (M.lookup k db) of 
---     --   Nothing -> throwDbError $ "writeValue: no such table: " ++ show t
---     --   Just tb -> 
---     --     ) db
---     -- let (key,value) = db
---     -- map map --循环遍历
---     -- map 
---     -- 遍历db里面都tables和values
---     -- values -> 存入mptree -> 返回rootId -> 存入tables？
---     -- let p = set committed (_temp s) s
---     return $ (,()) $ s 
-
-stateRoot2MPval :: StateRoot -> MPVal
-stateRoot2MPval root = undefined
+mpdb2MPval :: MPDB -> MPVal
+mpdb2MPval root = undefined
 
 transMaybeMPVal :: Maybe MPVal -> MPVal
 transMaybeMPVal Nothing = ""
@@ -317,52 +284,24 @@ transMaybeMPVal (Just v) = v
 -- reset db to def
 rollbackTx_ :: MPtreeDb -> IO (MPtreeDb,())
 rollbackTx_ s = 
-  return $ (,()) $ MPtreeDb def (_stateRootTree s)
+  return $ (,()) $ MPtreeDb def (_rootMPDB s)
 
 -- MPtree中获取值
-getMPtreeValue ::(MonadIO m,MonadFail m)=> MPKey -> StateRoot -> m (Maybe MPVal)
-getMPtreeValue key sr = do
-  nodedbs <- openRocksDB "/seal/contract"
-  let mpdb' = MPDB {rdb=nodedbs,stateRoot=sr}
-  v <- getKeyVal mpdb' key
+getMPtreeValue ::(MonadIO m,MonadFail m)=> MPKey -> MPDB -> m (Maybe MPVal)
+getMPtreeValue key mpdb = do
+  v <- getKeyVal mpdb key
   return $ v
 
 -- MPtree中插入新的值
-setMPtreeValue :: MPKey -> MPVal -> StateRoot -> IO StateRoot
-setMPtreeValue k v root = do
-  nodedbs <- openRocksDB "/seal/contract"
-  let mpdb' = MPDB {rdb=nodedbs,stateRoot=root}
-  -- mp <- putKeyVal mpdb' k v
-  st <- putKeyVal mpdb' k v
-  return $ stateRoot st
+setMPtreeValue :: MPKey -> MPVal -> MPDB -> IO MPDB
+setMPtreeValue k v mpdb = do
+  st <- putKeyVal mpdb k v
+  return $ st
 
 
 -- 将table value存入具体的table数中   todo 更新tables树索引
 addTableValue :: [(MPKey, MPVal)] -> StateRoot -> StateRoot
 addTableValue ls root = undefined
-  -- do
-  -- nodedbs <- openRocksDB "/seal/contract"
-  -- let mpdb' = MPDB {rdb=nodedbs,stateRoot = root}
-  -- sts <- forM ls $ \(k,v) -> do
-  --   mp <- putKeyVal mpdb' k v
-  --   -- todo head mp 是最后一个还是第一个，是否需要reverse
-  --   return $ stateRoot mp
-  
-  -- return sts
-
-  -- map (\(k,v) -> putKeyVal mpdb' k v) ls
-  -- return stateRoot mpdb'
-
-
-
--- rootKey /seal/tables 先保存table，再保存tables表？  k - v
--- key:tableName  value:tableRoot
--- key:key value:value
--- saveToMpTreeDb :: String -> k -> v
--- saveToMpTreeDb rootKey =  do
---   nodedbs <- openRocksDB rootKey
---   let rdb' = MPDB {rdb=nodedbs,stateRoot=emptyTriePtr}
---   putKeyVal rdb' k $ serialize' v 
 
 
 --queryKeys 先从map里面查，再从mptree里面查？
@@ -404,7 +343,7 @@ conv (PValue v) = case cast v of
 
 _test :: IO ()
 _test = do
-  let e :: MPtreeDb = def
+  let e :: MPtreeDb = MPtreeDb {_temp=def}
   let p = persister
       dt = DataTable "data"
       tt = TxTable "tx"
