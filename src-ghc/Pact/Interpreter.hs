@@ -108,7 +108,9 @@ mkPureEnv :: Loggers -> IO (PactDbEnv (DbEnv Pure.PureDb))
 mkPureEnv loggers = mkPactDbEnv pactdb $ initDbEnv loggers Pure.persister Pure.initPureDb
 
 mkMPtreeEnv :: Loggers -> IO (PactDbEnv (DbEnv MP.MPtreeDb))
-mkMPtreeEnv loggers = mkPactDbEnv pactdb $ initDbEnv loggers MP.persister MP.initMPtreeDb
+mkMPtreeEnv loggers = do
+  mpDb <- MP.initMPtreeDb
+  mkPactDbEnv pactdb $ initDbEnv loggers MP.persister mpDb
 
 
 mkPactDbEnv :: PactDb e -> e -> IO (PactDbEnv e)

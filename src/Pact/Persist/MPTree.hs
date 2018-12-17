@@ -6,7 +6,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DeriveAnyClass #-}
+-- {-# LANGUAGE DeriveAnyClass #-}
 
 
 module Pact.Persist.MPTree
@@ -15,8 +15,8 @@ module Pact.Persist.MPTree
     Tbl(..),tbl,
     Tables(..),tbls,
     Db(..),dataTables,
-    -- committed,tblType,stateRootTree,
-    stateRootTable,rootMPDB,
+    -- committed,tblType,stateRootTree,stateRootTable,
+    rootMPDB,
     MPtreeDb(..),temp,
     initMPtreeDb,
     persister
@@ -34,11 +34,11 @@ import Data.Semigroup (Semigroup)
 import Pact.Persist hiding (compileQuery)
 
 import           Seal.DB.MerklePatricia
-import           Seal.DB.MerklePatricia.Internal
-import qualified Data.NibbleString                              as N
+-- import           Seal.DB.MerklePatricia.Internal
+-- import qualified Data.NibbleString                              as N
 import           Pos.DB.Rocks.Functions                
-import           Pos.Binary.Class (Bi (..), serialize',decodeFull')
-import           Pos.DB.Rocks.Types
+-- import           Pos.Binary.Class (Bi (..), serialize',decodeFull')
+-- import           Pos.DB.Rocks.Types
 import           Seal.DB.MerklePatricia.Utils
 import           Universum (MonadFail)
 import qualified Data.ByteString   as B
@@ -57,10 +57,13 @@ instance Show PValue where show (PValue a) = show a
 
 --MM.Modifyer 保存某张表的修改  
 data Tbl k = Tbl {
-  _tbl :: MM.MapModifier k PValue,
-  _stateRootTable :: StateRoot
-  } deriving (Show,Semigroup,Monoid)
+  _tbl :: MM.MapModifier k PValue
+  -- ,_tableMPDB :: MPDB
+  } deriving (Show)
 makeLenses ''Tbl
+
+-- instance Show Tbl k where
+--   show = ""
 
 --MM.Modifyer 多余？ 只保留每个table自己的modifyer
 -- 之前是在内存中，才需要这样做
@@ -138,12 +141,9 @@ persister = Persister {
   refreshConn = return . (,())
   }
 
-baseLookup :: (Eq k, Hashable k) => k -> Maybe v
+baseLookup :: k -> Maybe v
 baseLookup _ = Nothing
 
---todo 从mpTree中读取数据
-baseLookupM :: (Applicative m, Eq k, Hashable k) => k -> m (Maybe v)
-baseLookupM _ = pure Nothing
 
 --先从modifyer中读取，没有，则从mptree中读取
 --table key 
@@ -156,47 +156,57 @@ readValue_ t k s = do
   -- let tables = _tbls . _dataTables . _temp $ s
   let tables = view (temp . tblType t . tbls) s
   --通过key，获取对应的value
-  --value没有，zai
-  pv <- case MM.lookup baseLookup t tables of 
+  --mptree-tables中获取具体的table
+  let  baseGetter :: Table k ->  m (Maybe v)
+       baseGetter _ = undefined
+  mtbl <- MM.lookupM baseGetter t tables
+  pv <- case mtbl of 
           --从mptree中读取 
-          Nothing -> do
-            mpv <- readFromMPtree t k s
-            return mpv
-          Just v  -> case MM.lookup baseLookup k (_tbl v) of 
-            Nothing -> throwDbError $ "readValue: no value at key: " ++ show k
-            Just vv -> return vv
+          Nothing          -> throwDbError $ "readValue: no such table: " ++ show t
+          Just table  -> do
+            let valueGetter :: k -> m (Maybe v)
+                valueGetter _ = undefined
+            mpv <- MM.lookupM valueGetter k (_tbl table)
+            case mpv of 
+              Nothing -> throwDbError $ "readValue: no value at key: " ++ show k
+              Just kValue -> return kValue
   v <- conv $ pv
   return $ (s,) $ (Just v)
+  -- where 
+  --   baseGetter :: k ->  (Maybe v)
+  --   baseGetter k = undefined
 
 --从mptree中读取数据
 -- table k, k -> maybe v
-readFromMPtree :: (PactKey k) => Table k -> k -> MPtreeDb -> IO PValue
-readFromMPtree t k s = do
-  let mpval = tableKey2MPKey t
-  -- Maybe MPVal --MPVal 2 MpKey
-  tid <- getMPtreeValue mpval (_rootMPDB s)
-  kva <- case tid of 
-           Nothing -> throwDbError $ "readValue: no such table: " ++ show t 
-           Just ta -> do
-             tval <- getMPtreeValue (pactKey2MPKey k) (mpVal2MPDB ta)
-             case tval of 
-               Nothing -> throwDbError $ "readValue: no value at  key: " ++ show k 
-               Just va -> return va
-  return $ mpVal2PValue kva           
+-- readFromMPtree :: (PactKey k) => Table k -> k -> MPtreeDb -> IO PValue
+-- readFromMPtree t k s = do
+--   let mpval = tableKey2MPKey t
+--   -- Maybe MPVal --MPVal 2 MpKey
+--   tid <- getMPtreeValue mpval (_rootMPDB s)
+--   kva <- case tid of 
+--            Nothing -> throwDbError $ "readValue: no such table: " ++ show t 
+--            Just ta -> do
+--              tval <- getMPtreeValue (pactKey2MPKey k) (mpVal2MPDB ta)
+--              case tval of 
+--                Nothing -> throwDbError $ "readValue: no value at  key: " ++ show k 
+--                Just va -> return va
+--   return $ mpVal2PValue kva           
 
 -- instance PactValue MPVal
   
-mpVal2PValue :: MPVal -> PValue
-mpVal2PValue p = undefined
+-- mpVal2PValue :: MPVal -> PValue
+-- mpVal2PValue p = undefined
 
-pactKey2MPKey :: PactKey k => k -> MPKey
-pactKey2MPKey p = undefined
+-- pactKey2MPKey :: PactKey k => k -> MPKey
+-- pactKey2MPKey _ = undefined
 
 mpVal2MPDB :: MPVal -> MPDB
-mpVal2MPDB v = undefined
+mpVal2MPDB _ = undefined
 
 tableKey2MPKey :: Table k -> MPKey
 tableKey2MPKey (DataTable t) = byteString2TermNibbleString $ sanitize t
+tableKey2MPKey (TxTable t) = byteString2TermNibbleString $ sanitize t
+
 
 sanitize :: TableId -> B.ByteString
 sanitize (TableId t) = encodeUtf8 t
@@ -205,7 +215,7 @@ sanitize (TableId t) = encodeUtf8 t
 createTable_ :: (Hashable k) => Table k -> MPtreeDb -> IO (MPtreeDb,())
 -- 直接在mptree中创建table  
 createTable_ t s = fmap (,()) $ overM s (temp . tblType t . tbls) $ \ts -> case MM.lookup baseLookup t ts of
-  Nothing -> return (MM.insert t mempty ts)
+  Nothing -> return (MM.insert t undefined ts)
   Just _ -> throwDbError $ "createTable: already exists: " ++ show t
 
 writeValue_ :: (PactKey k, PactValue v) => Table k -> WriteType -> k -> v -> MPtreeDb -> IO (MPtreeDb,())
@@ -216,10 +226,6 @@ writeValue_ t wt k v s =  fmap (,()) $ overM s (temp . tblType t . tbls) $ \ts -
     (Nothing,Update) -> throwDbError $ "Update: no value at key: " ++ show k
     _ -> return $ MM.insert k (PValue v) m
 
-insertMP :: (PactKey k) => Table k -> Tbl k -> MPtreeDb -> MM.MapModifier (Table k) (Tbl k)
-insertMP t v m =  MM.insert t v hm
-  where hm = view (temp . tblType t . tbls) m
-  -- $ view (temp . tblType t . tbls) m      
 
 --初始化mptree,创建tables树
 beginTx_ :: MPtreeDb -> IO (MPtreeDb,())
@@ -269,17 +275,17 @@ setMPtreeValues ((k,v):xs) mpdb = do
 setMPtreeValues [] mpdb = return mpdb  
 
 dataKey2MPKey :: DataKey -> MPKey
-dataKey2MPKey key = undefined
+dataKey2MPKey _ = undefined
 
 pValue2MPVal :: PValue -> MPVal
-pValue2MPVal val = undefined
+pValue2MPVal _ = undefined
 
 mpdb2MPval :: MPDB -> MPVal
-mpdb2MPval root = undefined
+mpdb2MPval _ = undefined
 
-transMaybeMPVal :: Maybe MPVal -> MPVal
-transMaybeMPVal Nothing = ""
-transMaybeMPVal (Just v) = v
+-- transMaybeMPVal :: Maybe MPVal -> MPVal
+-- transMaybeMPVal Nothing = ""
+-- transMaybeMPVal (Just v) = v
 
 -- reset db to def
 rollbackTx_ :: MPtreeDb -> IO (MPtreeDb,())
@@ -299,31 +305,26 @@ setMPtreeValue k v mpdb = do
   return $ st
 
 
--- 将table value存入具体的table数中   todo 更新tables树索引
-addTableValue :: [(MPKey, MPVal)] -> StateRoot -> StateRoot
-addTableValue ls root = undefined
-
-
 --queryKeys 先从map里面查，再从mptree里面查？
 
-compileQuery :: PactKey k => Maybe (KeyQuery k) -> (k -> Bool)
-compileQuery Nothing = const True
-compileQuery (Just kq) = compile kq
-  where
-    compile (KQKey cmp k) = (`op` k)
-      where op = case cmp of
-              KGT -> (>)
-              KGTE -> (>=)
-              KEQ -> (==)
-              KNEQ -> (/=)
-              KLT -> (<)
-              KLTE -> (<=)
-    compile (KQConj l o r) = conj o <$> compile l <*> compile r
-    conj AND = (&&)
-    conj OR = (||)
-{-# INLINE compileQuery #-}
+-- compileQuery :: PactKey k => Maybe (KeyQuery k) -> (k -> Bool)
+-- compileQuery Nothing = const True
+-- compileQuery (Just kq) = compile kq
+--   where
+--     compile (KQKey cmp k) = (`op` k)
+--       where op = case cmp of
+--               KGT -> (>)
+--               KGTE -> (>=)
+--               KEQ -> (==)
+--               KNEQ -> (/=)
+--               KLT -> (<)
+--               KLTE -> (<=)
+--     compile (KQConj l o r) = conj o <$> compile l <*> compile r
+--     conj AND = (&&)
+--     conj OR = (||)
+-- {-# INLINE compileQuery #-}
 
-qry :: PactKey k => Table k -> Maybe (KeyQuery k) -> MPtreeDb -> IO [(k,PValue)]
+qry :: Table k -> Maybe (KeyQuery k) -> MPtreeDb -> IO [(k,PValue)]
 -- qry t kq s = case firstOf (temp . tblType t . tbls . ix t . tbl) s of
 --   Nothing -> throwDbError $ "query: no such table: " ++ show t
 --   Just m -> return $ filter (compileQuery kq . fst) $ M.toList m
@@ -343,7 +344,7 @@ conv (PValue v) = case cast v of
 
 _test :: IO ()
 _test = do
-  let e :: MPtreeDb = MPtreeDb {_temp=def}
+  let e :: MPtreeDb = MPtreeDb {_temp=def,_rootMPDB=undefined}
   let p = persister
       dt = DataTable "data"
       tt = TxTable "tx"
