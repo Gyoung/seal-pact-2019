@@ -157,24 +157,37 @@ readValue_ t k s = do
   let tables = view (temp . tblType t . tbls) s
   --通过key，获取对应的value
   --mptree-tables中获取具体的table
-  let  baseGetter :: Table k ->  m (Maybe v)
-       baseGetter _ = undefined
+  let  baseGetter :: Table k ->  IO (Maybe (Tbl k))
+       baseGetter tb = do
+        --table k 转换成mpkey
+        let mk = tableKey2MPKey tb 
+        -- 根据table k 查询对应的table stateroot  反序列化
+        tid <- getKeyVal (_rootMPDB s) mk    
+        -- fmap (\root -> Tbl def tid)
+        -- mpVal   tal k
+        return $ mpValToTbl tid
   mtbl <- MM.lookupM baseGetter t tables
   pv <- case mtbl of 
           --从mptree中读取 
           Nothing          -> throwDbError $ "readValue: no such table: " ++ show t
           Just table  -> do
-            let valueGetter :: k -> m (Maybe v)
-                valueGetter _ = undefined
+            let valueGetter :: k -> IO (Maybe PValue)
+                valueGetter key = do
+                  --将k转换成mpkey
+                  let mpkey = pactKey2MPKey key
+                  let tMpdb = _rootMPDB s
+                  -- tal k 转换成mpdb
+                  let mpdb = MPDB {rdb=(rdb tMpdb),stateRoot=(tbl2StateRoot table)}
+                  --获取对应value
+                  val <- getKeyVal mpdb mpkey
+                  return $ mpValToPValue val
             mpv <- MM.lookupM valueGetter k (_tbl table)
             case mpv of 
               Nothing -> throwDbError $ "readValue: no value at key: " ++ show k
               Just kValue -> return kValue
   v <- conv $ pv
   return $ (s,) $ (Just v)
-  -- where 
-  --   baseGetter :: k ->  (Maybe v)
-  --   baseGetter k = undefined
+  
 
 --从mptree中读取数据
 -- table k, k -> maybe v
@@ -195,10 +208,18 @@ readValue_ t k s = do
 -- instance PactValue MPVal
   
 -- mpVal2PValue :: MPVal -> PValue
--- mpVal2PValue p = undefined
+-- mpVal2PValue _ = undefined
+tbl2StateRoot :: Tbl k -> StateRoot
+tbl2StateRoot _ = undefined
 
--- pactKey2MPKey :: PactKey k => k -> MPKey
--- pactKey2MPKey _ = undefined
+mpValToPValue :: Maybe MPVal -> Maybe PValue
+mpValToPValue _ = undefined
+
+mpValToTbl :: Maybe MPVal -> Maybe (Tbl k)
+mpValToTbl _ = undefined
+
+pactKey2MPKey :: k -> MPKey
+pactKey2MPKey _ = undefined
 
 mpVal2MPDB :: MPVal -> MPDB
 mpVal2MPDB _ = undefined
@@ -255,7 +276,7 @@ setMptreeTables :: [(Table DataKey,Tbl DataKey)] -> MPDB -> IO MPDB
 setMptreeTables ((k,v):xs) mpdb = do
   let mpKey = tableKey2MPKey k
   let values = MM.toList tableSchema (_tbl v)
-  tid <- getMPtreeValue mpKey mpdb
+  tid <- getMPtreeValue mpdb mpKey
   tsr <- case tid of 
     Nothing -> setMPtreeValues values (MPDB {rdb=(rdb mpdb),stateRoot=emptyTriePtr})
     Just tv -> setMPtreeValues values (mpVal2MPDB tv)
@@ -293,8 +314,8 @@ rollbackTx_ s =
   return $ (,()) $ MPtreeDb def (_rootMPDB s)
 
 -- MPtree中获取值
-getMPtreeValue ::(MonadIO m,MonadFail m)=> MPKey -> MPDB -> m (Maybe MPVal)
-getMPtreeValue key mpdb = do
+getMPtreeValue ::(MonadIO m,MonadFail m)=> MPDB -> MPKey -> m (Maybe MPVal)
+getMPtreeValue mpdb key  = do
   v <- getKeyVal mpdb key
   return $ v
 
@@ -344,7 +365,7 @@ conv (PValue v) = case cast v of
 
 _test :: IO ()
 _test = do
-  let e :: MPtreeDb = MPtreeDb {_temp=def,_rootMPDB=undefined}
+  e <- initMPtreeDb
   let p = persister
       dt = DataTable "data"
       tt = TxTable "tx"
