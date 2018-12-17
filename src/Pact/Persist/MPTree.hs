@@ -6,7 +6,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
--- {-# LANGUAGE DeriveAnyClass #-}
 
 
 module Pact.Persist.MPTree
@@ -16,7 +15,7 @@ module Pact.Persist.MPTree
     Tables(..),tbls,
     Db(..),dataTables,
     -- committed,tblType,stateRootTree,stateRootTable,
-    rootMPDB,
+    rootMPDB,tableStateRoot,
     MPtreeDb(..),temp,
     initMPtreeDb,
     persister
@@ -56,11 +55,12 @@ data PValue = forall a . PactValue a => PValue a
 instance Show PValue where show (PValue a) = show a
 
 --MM.Modifyer 保存某张表的修改  
-newtype Tbl k = Tbl {
-  _tbl :: MM.MapModifier k PValue
-  -- ,_tableMPDB :: MPDB
-  } deriving (Show,Semigroup,Monoid)
+data Tbl k = Tbl {
+  _tbl :: MM.MapModifier k PValue,
+  _tableStateRoot :: StateRoot
+  } deriving (Show)
 makeLenses ''Tbl
+
 
 -- instance Show Tbl k where
 --   show = ""
@@ -104,38 +104,22 @@ overM s l f = f (view l s) >>= \a -> return (set l a s)
 
 persister :: Persister MPtreeDb
 persister = Persister {
- --insert temp map
-  -- createTable = \t s -> fmap (,()) $ overM s (temp . tblType t . tbls) $ \ts -> case M.lookup t ts of
-  --     Nothing -> return (M.insert t mempty ts)
-  --     Just _ -> throwDbError $ "createTable: already exists: " ++ show t
-  -- ,
   -- 判断mptree中是否有table,没有则创建，同时创建一个modifyer，如果有，则直接创建modifyer
   createTable = \t s -> createTable_ t s,
 --   beginTx = \_ s -> return $ (,()) $ set temp (_committed s) s
   beginTx = \_ s -> beginTx_ s
   ,
---   commitTx = \s -> return $ (,()) $ set committed (_temp s) s
--- modifyer 值 提交到mptree  modifyer 设置null   delete,insert
+-- modifyer 值 提交到mptree 
   commitTx = \s -> commitTx_ s
   ,
---   rollbackTx = \s -> return $ (,()) $ set temp (_committed s) s
   rollbackTx = \s -> rollbackTx_ s
   ,
   queryKeys = \t kq s -> (s,) . map fst <$> qry t kq s
   ,
   query = \t kq s -> fmap (s,) $ qry t kq s >>= mapM (\(k,v) -> (k,) <$> conv v)
   ,
-  -- 新找到表到modifyer，从modifyer readvalue
-  -- readValue = \t k s -> fmap (s,) $ traverse conv $ firstOf (temp . tblType t . tbls . ix t . tbl . ix k) s
   readValue = \t k s -> readValue_ t k s
   ,
-  --数据库读取表 ->stateroot -> MM.modifyer 
-  -- writeValue = \t wt k v s -> fmap (,()) $ overM s (temp . tblType t . tbls) $ \ts -> case M.lookup t ts of
-  --     Nothing -> throwDbError $ "writeValue: no such table: " ++ show t
-  --     Just tb -> fmap (\nt -> M.insert t nt ts) $ overM tb tbl $ \m -> case (M.lookup k m,wt) of
-  --       (Just _,Insert) -> throwDbError $ "Insert: value already at key: " ++ show k
-  --       (Nothing,Update) -> throwDbError $ "Update: no value at key: " ++ show k
-  --       _ -> return $ M.insert k (PValue v) m
   writeValue = \t wt k v s -> writeValue_ t wt k v s
   ,
   refreshConn = return . (,())
@@ -146,10 +130,6 @@ baseLookup _ = Nothing
 
 
 --先从modifyer中读取，没有，则从mptree中读取
---table key 
---通过table从tables中找出table
---通过key从table中找出value
---类型转换 MPVal->PValue
 readValue_ :: (PactKey k, PactValue v) => Table k -> k -> MPtreeDb -> IO (MPtreeDb,(Maybe v))
 readValue_ t k s = do
   --获取tables
@@ -157,19 +137,18 @@ readValue_ t k s = do
   let tables = view (temp . tblType t . tbls) s
   --通过key，获取对应的value
   --mptree-tables中获取具体的table
-  let  baseGetter :: Table k ->  IO (Maybe (Tbl k))
+  let  baseGetter :: PactKey k => Table k ->  IO (Maybe (Tbl k))
        baseGetter tb = do
         --table k 转换成mpkey
         let mk = tableKey2MPKey tb 
-        -- 根据table k 查询对应的table stateroot  反序列化
+        -- 根据table k 查询对应的table stateroot
         tid <- getKeyVal (_rootMPDB s) mk    
-        -- fmap (\root -> Tbl def tid)
-        -- mpVal   tal k
+        -- mpVal to  tal k
         return $ mpValToTbl tid
   mtbl <- MM.lookupM baseGetter t tables
   pv <- case mtbl of 
           --从mptree中读取 
-          Nothing          -> throwDbError $ "readValue: no such table: " ++ show t
+          Nothing     -> throwDbError $ "readValue: no such table: " ++ show t
           Just table  -> do
             let valueGetter :: k -> IO (Maybe PValue)
                 valueGetter key = do
@@ -177,7 +156,7 @@ readValue_ t k s = do
                   let mpkey = pactKey2MPKey key
                   let tMpdb = _rootMPDB s
                   -- tal k 转换成mpdb
-                  let mpdb = MPDB {rdb=(rdb tMpdb),stateRoot=(tbl2StateRoot table)}
+                  let mpdb = MPDB {rdb=(rdb tMpdb),stateRoot=(_tableStateRoot table)}
                   --获取对应value
                   val <- getKeyVal mpdb mpkey
                   return $ mpValToPValue val
@@ -186,37 +165,13 @@ readValue_ t k s = do
               Nothing -> throwDbError $ "readValue: no value at key: " ++ show k
               Just kValue -> return kValue
   v <- conv $ pv
-  return $ (s,) $ (Just v)
-  
-
---从mptree中读取数据
--- table k, k -> maybe v
--- readFromMPtree :: (PactKey k) => Table k -> k -> MPtreeDb -> IO PValue
--- readFromMPtree t k s = do
---   let mpval = tableKey2MPKey t
---   -- Maybe MPVal --MPVal 2 MpKey
---   tid <- getMPtreeValue mpval (_rootMPDB s)
---   kva <- case tid of 
---            Nothing -> throwDbError $ "readValue: no such table: " ++ show t 
---            Just ta -> do
---              tval <- getMPtreeValue (pactKey2MPKey k) (mpVal2MPDB ta)
---              case tval of 
---                Nothing -> throwDbError $ "readValue: no value at  key: " ++ show k 
---                Just va -> return va
---   return $ mpVal2PValue kva           
-
--- instance PactValue MPVal
-  
--- mpVal2PValue :: MPVal -> PValue
--- mpVal2PValue _ = undefined
-tbl2StateRoot :: Tbl k -> StateRoot
-tbl2StateRoot _ = undefined
+  return $ (s,) $ (Just v)         
 
 mpValToPValue :: Maybe MPVal -> Maybe PValue
 mpValToPValue _ = undefined
 
-mpValToTbl :: Maybe MPVal -> Maybe (Tbl k)
-mpValToTbl _ = undefined
+mpValToTbl :: PactKey k => Maybe MPVal -> Maybe (Tbl k)
+mpValToTbl = fmap(\p -> Tbl {_tbl=mempty, _tableStateRoot=StateRoot p})
 
 pactKey2MPKey :: k -> MPKey
 pactKey2MPKey _ = undefined
@@ -236,7 +191,7 @@ sanitize (TableId t) = encodeUtf8 t
 createTable_ :: (Hashable k,Eq k) => Table k -> MPtreeDb -> IO (MPtreeDb,())
 -- 直接在mptree中创建table  
 createTable_ t s = fmap (,()) $ overM s (temp . tblType t . tbls) $ \ts -> case MM.lookup baseLookup t ts of
-  Nothing -> return (MM.insert t mempty ts)
+  Nothing -> return (MM.insert t (Tbl mempty emptyTriePtr) ts)
   Just _ -> throwDbError $ "createTable: already exists: " ++ show t
 
 writeValue_ :: (PactKey k, PactValue v) => Table k -> WriteType -> k -> v -> MPtreeDb -> IO (MPtreeDb,())
@@ -250,9 +205,6 @@ writeValue_ t wt k v s =  fmap (,()) $ overM s (temp . tblType t . tbls) $ \ts -
 
 --初始化mptree,创建tables树
 beginTx_ :: MPtreeDb -> IO (MPtreeDb,())
--- beginTx_ s = do
---     let p = set temp (_committed s) s
---     return $ (,()) $ p
 beginTx_ s = return $ (,()) $ s
 
 tablesSchema :: [(Table DataKey,Tbl DataKey)]
