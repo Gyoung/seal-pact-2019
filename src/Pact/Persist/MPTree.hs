@@ -56,10 +56,10 @@ data PValue = forall a . PactValue a => PValue a
 instance Show PValue where show (PValue a) = show a
 
 --MM.Modifyer 保存某张表的修改  
-data Tbl k = Tbl {
+newtype Tbl k = Tbl {
   _tbl :: MM.MapModifier k PValue
   -- ,_tableMPDB :: MPDB
-  } deriving (Show)
+  } deriving (Show,Semigroup,Monoid)
 makeLenses ''Tbl
 
 -- instance Show Tbl k where
@@ -212,10 +212,10 @@ sanitize :: TableId -> B.ByteString
 sanitize (TableId t) = encodeUtf8 t
 
 -- 判断mptree中是否有table,没有则创建，同时创建一个modifyer，如果有，则直接创建modifyer
-createTable_ :: (Hashable k) => Table k -> MPtreeDb -> IO (MPtreeDb,())
+createTable_ :: (Hashable k,Eq k) => Table k -> MPtreeDb -> IO (MPtreeDb,())
 -- 直接在mptree中创建table  
 createTable_ t s = fmap (,()) $ overM s (temp . tblType t . tbls) $ \ts -> case MM.lookup baseLookup t ts of
-  Nothing -> return (MM.insert t undefined ts)
+  Nothing -> return (MM.insert t mempty ts)
   Just _ -> throwDbError $ "createTable: already exists: " ++ show t
 
 writeValue_ :: (PactKey k, PactValue v) => Table k -> WriteType -> k -> v -> MPtreeDb -> IO (MPtreeDb,())
