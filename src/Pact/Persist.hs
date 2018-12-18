@@ -121,6 +121,9 @@ instance PactValue a => PactValue [a]
 instance PactValue Module
 instance PactValue KeySet
 instance PactValue Value
+instance PactValue Text
+-- instance PactValue [Char]
+
 
 -- type Persist s a = s -> IO (s,a)
 

@@ -33,16 +33,19 @@ import Data.Semigroup (Semigroup)
 import Pact.Persist hiding (compileQuery)
 
 import           Seal.DB.MerklePatricia
+-- import           Seal.DB.MerklePatricia.Utils
 -- import           Seal.DB.MerklePatricia.Internal
 -- import qualified Data.NibbleString                              as N
 import           Pos.DB.Rocks.Functions                
 -- import           Pos.Binary.Class (Bi (..), serialize',decodeFull')
 -- import           Pos.DB.Rocks.Types
+import           Pos.DB.Rocks.Types (DB (..))
 import           Seal.DB.MerklePatricia.Utils
 import           Universum (MonadFail)
-import qualified Data.ByteString   as B
+import qualified Data.ByteString.Char8 as B
 import qualified Pos.Util.Modifier as MM
 import Data.Text.Encoding
+import qualified Data.Text as T
 import           Data.Hashable (Hashable)
 
 
@@ -150,7 +153,7 @@ readValue_ t k s = do
           --从mptree中读取 
           Nothing     -> throwDbError $ "readValue: no such table: " ++ show t
           Just table  -> do
-            let valueGetter :: k -> IO (Maybe PValue)
+            let valueGetter :: Show k => k -> IO (Maybe PValue)
                 valueGetter key = do
                   --将k转换成mpkey
                   let mpkey = pactKey2MPKey key
@@ -167,17 +170,18 @@ readValue_ t k s = do
   v <- conv $ pv
   return $ (s,) $ (Just v)         
 
+
+
+
 mpValToPValue :: Maybe MPVal -> Maybe PValue
-mpValToPValue _ = undefined
+mpValToPValue = fmap(\v -> PValue $ decodeUtf8 v)
 
 mpValToTbl :: PactKey k => Maybe MPVal -> Maybe (Tbl k)
 mpValToTbl = fmap(\p -> Tbl {_tbl=mempty, _tableStateRoot=StateRoot p})
 
-pactKey2MPKey :: k -> MPKey
-pactKey2MPKey _ = undefined
-
-mpVal2MPDB :: MPVal -> MPDB
-mpVal2MPDB _ = undefined
+pactKey2MPKey :: Show k => k -> MPKey
+pactKey2MPKey k = byteString2TermNibbleString key
+  where key = B.pack $ show k
 
 tableKey2MPKey :: Table k -> MPKey
 tableKey2MPKey (DataTable t) = byteString2TermNibbleString $ sanitize t
@@ -231,7 +235,7 @@ setMptreeTables ((k,v):xs) mpdb = do
   tid <- getMPtreeValue mpdb mpKey
   tsr <- case tid of 
     Nothing -> setMPtreeValues values (MPDB {rdb=(rdb mpdb),stateRoot=emptyTriePtr})
-    Just tv -> setMPtreeValues values (mpVal2MPDB tv)
+    Just tv -> setMPtreeValues values (mpVal2MPDB (rdb mpdb) tv)
   nst <- setMPtreeValue mpKey (mpdb2MPval tsr) mpdb
   setMptreeTables xs nst
 setMptreeTables [] mpdb = return mpdb
@@ -247,18 +251,18 @@ setMPtreeValues ((k,v):xs) mpdb = do
   setMPtreeValues xs rs
 setMPtreeValues [] mpdb = return mpdb  
 
+--Text -ByteString
 dataKey2MPKey :: DataKey -> MPKey
-dataKey2MPKey _ = undefined
+dataKey2MPKey (DataKey k) = byteString2TermNibbleString $ encodeUtf8 k
 
 pValue2MPVal :: PValue -> MPVal
-pValue2MPVal _ = undefined
+pValue2MPVal (PValue p) = encodeUtf8 $ T.pack (show p)
 
 mpdb2MPval :: MPDB -> MPVal
-mpdb2MPval _ = undefined
+mpdb2MPval (MPDB _ (StateRoot sr)) = sr
 
--- transMaybeMPVal :: Maybe MPVal -> MPVal
--- transMaybeMPVal Nothing = ""
--- transMaybeMPVal (Just v) = v
+mpVal2MPDB :: DB -> MPVal -> MPDB
+mpVal2MPDB db pval  = MPDB {rdb=db,stateRoot=(StateRoot pval)}
 
 -- reset db to def
 rollbackTx_ :: MPtreeDb -> IO (MPtreeDb,())
