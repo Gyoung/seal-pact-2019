@@ -48,11 +48,7 @@ import Data.Text.Encoding
 import qualified Data.Text as T
 import           Data.Hashable (Hashable)
 
-
-
 -- import Universum((<>))
-
-
 
 data PValue = forall a . PactValue a => PValue a
 instance Show PValue where show (PValue a) = show a
@@ -64,12 +60,6 @@ data Tbl k = Tbl {
   } deriving (Show)
 makeLenses ''Tbl
 
-
--- instance Show Tbl k where
---   show = ""
-
---MM.Modifyer 多余？ 只保留每个table自己的modifyer
--- 之前是在内存中，才需要这样做
 newtype Tables k = Tables {
   _tbls :: MM.MapModifier (Table k) (Tbl k)
   } deriving (Show,Semigroup,Monoid)
@@ -109,10 +99,9 @@ persister :: Persister MPtreeDb
 persister = Persister {
   -- 判断mptree中是否有table,没有则创建，同时创建一个modifyer，如果有，则直接创建modifyer
   createTable = \t s -> createTable_ t s,
---   beginTx = \_ s -> return $ (,()) $ set temp (_committed s) s
   beginTx = \_ s -> beginTx_ s
   ,
--- modifyer 值 提交到mptree 
+  -- modifyer 值 提交到mptree 
   commitTx = \s -> commitTx_ s
   ,
   rollbackTx = \s -> rollbackTx_ s
