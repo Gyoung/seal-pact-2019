@@ -32,6 +32,7 @@ library
                      , Pact.PersistPactDb
                      , Pact.Persist
                      , Pact.Persist.Pure
+                     , Pact.Persist.MPTree
                      , Pact.Repl
                      , Pact.Repl.Lib
                      , Pact.Repl.Types
@@ -152,6 +153,11 @@ library
                      , vector-space >= 0.10.4 && < 0.14
                      , mmorph >= 1.1 && < 1.2
                      , universum
+                     , cardano-sl-db
+                     , cardano-sl-binary
+                     , cardano-sl-util
+                     , nibblestring
+
 
   if !impl(ghcjs)
     build-depends:
@@ -203,7 +209,7 @@ executable bench
 
 test-suite hspec
   type:             exitcode-stdio-1.0
-  main-is:          hspec.hs
+  main-is:          Seal.hs
   hs-source-dirs:   tests
   default-language: Haskell2010
   ghc-options:      -Wall -threaded -rtsopts -O2 -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
