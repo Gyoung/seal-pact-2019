@@ -43,6 +43,8 @@ import           Pos.DB.Rocks.Types (DB (..))
 import           Seal.DB.MerklePatricia.Utils
 import           Universum (MonadFail)
 import qualified Data.ByteString.Char8 as B
+import qualified Data.ByteString.Lazy as BSL
+
 import qualified Pos.Util.Modifier as MM
 import Data.Text.Encoding
 import qualified Data.Text as T
@@ -135,7 +137,7 @@ createTable_ t s = do
             Nothing -> return $ MM.insert t (Tbl mempty emptyTriePtr) tables
             Just _ -> throwDbError $ "createTable: already exists: " ++ show t
   let ns = set (temp . tblType t . tbls) tbs s
-  return $ (,()) $ ns 
+  return $ (ns,())
 
 --初始化mptree,创建tables树
 beginTx_ :: MPtreeDb -> IO (MPtreeDb,())
@@ -144,18 +146,18 @@ beginTx_ s = return $ (,()) $ s
 commitTx_ :: MPtreeDb -> IO (MPtreeDb,())
 commitTx_ s = do
   let tables = _tbls . _dataTables . _temp $ s
-  let    ls  = MM.toList tablesSchema tables
+  let    ls  = MM.insertions tables
   root <- setMptreeTables ls (_rootMPDB s)
   -- 更新最外层StateRoot
   let ss = set rootMPDB root s
   -- 清空内存DB
   let ns = set temp def ss
-  return $ (,()) $ ns
+  return $ (ns,())
 
 -- reset db to def
 rollbackTx_ :: MPtreeDb -> IO (MPtreeDb,())
 rollbackTx_ s = 
-  return $ (,()) $ MPtreeDb def (_rootMPDB s)
+  return $ (MPtreeDb def (_rootMPDB s),()) 
 
 --先从modifyer中读取，没有，则从mptree中读取
 readValue_ :: (PactKey k, PactValue v) => Table k -> k -> MPtreeDb -> IO (MPtreeDb,(Maybe v))
@@ -189,10 +191,10 @@ readValue_ t k s = do
                   return $ mpValToPValue val
             mpv <- MM.lookupM valueGetter k (_tbl table)
             case mpv of 
-              Nothing -> throwDbError $ "readValue: no value at key: " ++ show k
-              Just kValue -> return $ kValue
+              Nothing      -> throwDbError $ "readValue: no value at key: " ++ show k
+              Just kValue  -> return kValue
   v <- conv $ pv
-  return $ (s,) $ (Just v)
+  return $ (s,Just v)
 
 writeValue_ :: (PactKey k, PactValue v) => Table k -> WriteType -> k -> v -> MPtreeDb -> IO (MPtreeDb,())
 --todo:writeValue MM中没有表，判断mptree中是否有，有的话创建一个MM,再写入MM
@@ -230,7 +232,7 @@ writeValue_ t wt k v s = do
   --更新MM中tables
   let newTables = MM.insert t tb tables
   let ns = set (temp . tblType t . tbls) newTables s
-  return $ (,()) $ ns    
+  return $ (ns,())   
 
 mpValToPValue :: Maybe MPVal -> Maybe PValue
 mpValToPValue = fmap(\v -> PValue $ decodeUtf8 v)
@@ -248,17 +250,17 @@ tableKey2MPKey (TxTable t) = bytesToNibbleString $ sanitize t
 sanitize :: TableId -> B.ByteString
 sanitize (TableId t) = encodeUtf8 t
 
-tablesSchema :: [(Table DataKey,Tbl DataKey)]
-tablesSchema = []
+-- tablesSchema :: [(Table DataKey,Tbl DataKey)]
+-- tablesSchema = []
 
-tableSchema :: [(DataKey,PValue)]
-tableSchema = []
+-- tableSchema :: [(DataKey,PValue)]
+-- tableSchema = []
 
 --将tables插入mptree
 setMptreeTables :: [(Table DataKey,Tbl DataKey)] -> MPDB -> IO MPDB
 setMptreeTables ((k,v):xs) mpdb = do
   let mpKey = tableKey2MPKey k
-  let values = MM.toList tableSchema (_tbl v)
+  let values = MM.insertions (_tbl v)
   tid <- getMPtreeValue mpdb mpKey
   tsr <- case tid of 
     Nothing -> setMPtreeValues values (MPDB {rdb=(rdb mpdb),stateRoot=emptyTriePtr})
@@ -281,9 +283,9 @@ setMPtreeValues [] mpdb = return mpdb
 --Text -ByteString
 dataKey2MPKey :: DataKey -> MPKey
 dataKey2MPKey (DataKey k) = bytesToNibbleString $ encodeUtf8 k
-
+--还是有双引号问题 用Json?
 pValue2MPVal :: PValue -> MPVal
-pValue2MPVal (PValue p) = encodeUtf8 $ T.pack (show p)
+pValue2MPVal (PValue p) = BSL.toStrict $ encode p
 
 mpdb2MPval :: MPDB -> MPVal
 mpdb2MPval (MPDB _ (StateRoot sr)) = sr
@@ -358,7 +360,7 @@ _test = do
     -- run $ createTable p tt
     -- run $ commitTx p
     -- run $ beginTx p True
-    run $ writeValue p dt Insert "stuff" (String "hello")
+    run $ writeValue p dt Insert "stuff" (T.pack "hello")
     run $ writeValue p dt Insert "tough" (String "goodbye")
 
     -- run $ writeValue p tt Write 1 (String "txy goodness")
@@ -367,7 +369,7 @@ _test = do
     -- run $ writeValue p dt Insert "stuff1" (String "hello")
     -- run $ writeValue p dt Insert "stuff1" (String "hello")
 
-    run $ createTable p dt
+    -- run $ createTable p dt
 
     -- run (readValue p dt "tough") >>= (liftIO . (print :: Maybe Value -> IO ()))
     run (readValue p dt "stuff") >>= (liftIO . (print :: Maybe Value -> IO ()))
