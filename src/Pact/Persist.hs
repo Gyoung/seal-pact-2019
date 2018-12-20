@@ -9,7 +9,7 @@ module Pact.Persist
   (Persist,
    Table(..),DataTable,TxTable,
    TableId(..),tableId,
-   PactKey,PactValue,
+   PactKey(..),PactValue,
    DataKey(..),TxKey(..),
    KeyCmp(..),cmpToOp,
    KeyConj(..),conjToOp,
@@ -27,15 +27,27 @@ import Data.Typeable
 import Pact.Types.Runtime
 import Universum ((<>))
 import Data.Semigroup (Semigroup)
+import qualified Data.ByteString.Char8 as B
+import Data.Text.Encoding
+
 
 type Persist s a = s -> IO (s,a)
 
 newtype DataKey = DataKey Text
   deriving (Eq,Ord,IsString,AsString,Hashable)
 instance Show DataKey where show (DataKey k) = show k
+
 newtype TxKey = TxKey Integer
   deriving (Eq,Ord,Num,Enum,Real,Integral,Hashable)
 instance Show TxKey where show (TxKey k) = show k
+
+class (Ord k,Show k,Eq k,Hashable k) => PactKey k where
+  toByteString :: k -> B.ByteString
+instance PactKey TxKey where
+  toByteString (TxKey t) = B.pack $ show t
+instance PactKey DataKey where
+  toByteString (DataKey t) = encodeUtf8 t
+
 
 type DataTable = Table DataKey
 type TxTable = Table TxKey
@@ -110,9 +122,7 @@ compileQuery keyfield (Just kq) = ("WHERE " <> qs,pms)
 {-# INLINE compileQuery #-}
 
 
-class (Ord k,Show k,Eq k,Hashable k) => PactKey k
-instance PactKey TxKey
-instance PactKey DataKey
+
 
 class (Eq v,Show v,ToJSON v,FromJSON v,Typeable v) => PactValue v
 instance PactValue v => PactValue (TxLog v)
