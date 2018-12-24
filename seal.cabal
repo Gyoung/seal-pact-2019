@@ -157,6 +157,7 @@ library
                      , cardano-sl-binary
                      , cardano-sl-util
                      , nibblestring
+                     , uuid
 
 
   if !impl(ghcjs)

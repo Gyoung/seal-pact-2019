@@ -40,7 +40,7 @@ import Data.Default
 import qualified Data.Attoparsec.Text as AP
 import Prelude
 import qualified Data.HashMap.Strict as M
-import qualified Data.Text as T (isInfixOf, length, all, splitOn, null, foldl', append)
+import qualified Data.Text as T (isInfixOf, length, all, splitOn, null, foldl', append, pack)
 import Safe
 import Control.Arrow hiding (app)
 import Data.Foldable
@@ -64,6 +64,12 @@ import Pact.Types.Version
 import Pact.Types.Hash
 import qualified Data.Set as S
 import Universum ((<>))
+-- import Data.UUID as U (toByteString)
+-- import qualified Data.UUID.V1 as U
+import qualified Data.UUID.V4 as U
+import Control.Monad.IO.Class
+
+-- import           Criterion.Main
 
 -- | All production native modules.
 natives :: [NativeModule]
@@ -283,6 +289,9 @@ langDefs =
 
     ,defRNative "tx-hash" txHash (funType tTyString [])
      "Obtain hash of current transaction as a string. `(tx-hash)`"
+
+    ,defRNative "uuid" uuid (funType tTyString [])
+     "Return a uuid `(uuid)`"
     
     ,defRNative "MSG_SENDER" msgSender (funType tTyString [])
      "Return the first PublicKey" 
@@ -634,6 +643,12 @@ strToInt i as =
 txHash :: RNativeFun e
 txHash _ [] = (tStr . asString) <$> view eeHash
 txHash i as = argsError i as
+
+uuid :: RNativeFun e
+uuid _ [] = do
+  nextId <- liftIO U.nextRandom
+  return $ toTerm $ T.pack $ show nextId
+uuid i as = argsError i as
 
 msgSender :: RNativeFun e
 msgSender _ [] = view eeMsgSigs >>= \ss -> return $ toTerm $ (decodeUtf8 . _pubKey) $ head (S.toList ss)
