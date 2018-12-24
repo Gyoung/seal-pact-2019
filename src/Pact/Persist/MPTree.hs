@@ -175,7 +175,7 @@ readValue_ t k s = do
         -- mpVal to  tal k
         return $ mpValToTbl tid
   mtbl <- MM.lookupM baseGetter t tables
-  pv <- case mtbl of 
+  mpv <- case mtbl of 
           --从mptree中读取 
           Nothing     -> throwDbError $ "readValue: no such table: " ++ show t
           Just table  -> do
@@ -189,12 +189,9 @@ readValue_ t k s = do
                   --获取对应value
                   val <- getKeyVal mpdb mpkey
                   return $ mpValToPValue val
-            mpv <- MM.lookupM valueGetter k (_tbl table)
-            case mpv of 
-              Nothing      -> throwDbError $ "readValue: no value at key: " ++ show k
-              Just kValue  -> return kValue
-  v <- conv $ pv
-  return $ (s,Just v)
+            MM.lookupM valueGetter k (_tbl table)
+  v <- traverse conv $ pv
+  return $ (s, v)
 
 writeValue_ :: (PactKey k, PactValue v) => Table k -> WriteType -> k -> v -> MPtreeDb -> IO (MPtreeDb,())
 --todo:writeValue MM中没有表，判断mptree中是否有，有的话创建一个MM,再写入MM
