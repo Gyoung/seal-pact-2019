@@ -60,20 +60,17 @@
     (hash [owner spender]))
 
   (defn token.new
-    [id name type owner info]
+    [token-id name type owner info]
     (let [me (MSG_SENDER)]
       (enforce (= admin-address me) "need admin")
-      ;; TODO uuid
-      (let [token-id (UUID)]
-        (insert realestate-table token-id
-                {:name             name
-                 :type             type
-                 :owner            owner
-                 :info             info
-                 :buy-price        0
-                 :total-shares     0
-                 :available-shares 0})
-        token-id)))
+      (insert realestate-table token-id
+              {:name             name
+               :type             type
+               :owner            owner
+               :info             info
+               :buy-price        0
+               :total-shares     0
+               :available-shares 0})))
 
   (defn token.startIssue
     [token-id total-shares buy-price info]
