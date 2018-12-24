@@ -8,7 +8,11 @@
 (defcontract realestateContract admin-address
 
   ;;(defevent transfer-event [^address from ^address to ^string token-id])
-  
+
+  ;; need get-accounts
+
+
+  ;; ==== real estate table ====
   (defrecord realestate
       [^string name
        ^string type
@@ -20,39 +24,47 @@
 
   (deftable realestate-table ^{realestate}) ;; key: ^string token-id
 
+  (create-table realestate-table)
+
+  ;; ==== announcement table =====
+  (defrecord announce
+      [^string text])
+  
+  (deftable announce-table ^{announce}) ;; key ^string announce
+
+  (create-table announce-table)
+
+  ;; ==== stake holder table ====
   (defrecord stakeholder
-      [^address owner
+      [^address holder
        ^decimal shares])
 
   (deftable stakeholder-table ^{stakeholder}) ;; key: ^string (hash token-id holder)
 
-  (defrecord allowance
-    [^decimal allowed
-     ^address holder
-     ;; ^address spender
-     ])
+  (create-table stakeholder-table)
 
+
+  ;; ==== balance table ====
+  (defrecord balance
+      [;; ^address account
+       ^decimal amount])
+
+  (deftable balance-table ^{balance}) ;; key: ^string (hash token-id account)
+
+  (create-table balance-table)
+  
   ;; use (hash [sender receiver]) as id
   ;;(deftable allowance-table ^{allowance})
 
   (defn- get-hash [owner spender]
     (hash [owner spender]))
 
-  (defn- get-key [a b]
-    (+ (+ a "/") b))
-
-  (defn- get-first-key [key]
-    (take 20 key))
-
-  (defn- get-last-key [key]
-    (drop 21 key))
-
   (defn token.new
     [id name type owner info]
     (let [me (MSG_SENDER)]
       (enforce (= admin-address me) "need admin")
-      ;; TODO
-      (let [token-id (GENERATE UNIQUE-TOKEN-ID)]
+      ;; TODO uuid
+      (let [token-id (UUID)]
         (insert realestate-table token-id
                 {:name             name
                  :type             type
@@ -87,22 +99,24 @@
         (update realestate-table token-id
                 {:buy-price 0}))))
 
-  (defn token.return ;; return what?
+  (defn token.return
+    ;; return balance of contract address to msg.sender
     [token-id]
-    (let [me (MSG_SENDER)]
-      ;; (enforce (= admin-address me) "need admin")
-      (with-default-read realestate-table token-id
-        {:buy-price -1}
-        {buy-price :buy-price}
-        (enforce (not= -1 buy-price) "token-id not exists")
-        (enforce (= me owner) "need owner"))))
+    (let [me (MSG_SENDER)
+          id (get-hash token-id me)]
+      (enforce (= admin-address me) "need admin")
+      (with-default-read balance-table id
+        {:amount -1}
+        {amount :amount}
+        (enforce (not= -1 amount) "record not exists")
+        (TRANSFER (CONTRACT-ADDRESS) me amount))))
 
   (defn token.balance
     [addr token-id]
-    )
-
-  (defn token.announce ;; 发公告
-    [token-id str])
+    (with-readth-default-read balance-table (get-hash token-id addr)
+      {:amount 0}
+      {amount :amount}
+      amount))
 
   (defn token.info
     [token-id]
@@ -111,10 +125,16 @@
       {info :info}
       info))
 
-  (defn token.announces ;; 查询公告
-    [token-id]
-    (with-default-read realestate-table token-id ;; 小表?
-      {}))
+  ;; 公告相关，不是核心功能，先往后放。先实现核心功能
+  ;; 思路大概是用select实现
+  ;; (defn token.announce ;; 发公告 TODO
+  ;;   [token-id str]
+  ;;   )
+
+  ;; (defn token.announces ;; 查询公告 TODO
+  ;;   [token-id]
+  ;;   (with-default-read realestate-table token-id ;; 小表?
+  ;;     {}))
   
 
   (defn total-shares [token-id]
@@ -148,25 +168,10 @@
       (let [cost (* buy-price shares)
             me (MSG_SENDER)
             id (get-hash token-id me)]
-        (send owner me cost) ;; send to from value
+        ;; (send owner me cost) ;; send to from value
+        (TRANSFER me (CONTRACT-ADDRESS) cost)
         (upsert-add stakeholder-table id :shares shares)
         (update realestate-table token-id {:available-shares (- available-shares shares)}))))
-
-  ;; (defn sell-shares [token-id shares]
-  ;;   (let [me (MSG_SENDER)
-  ;;         id (get-hash token-id me)]
-  ;;     (with-default-read realestate-table token-id
-  ;;       {sell-price       :sell-price
-  ;;        available-shares :available-shares
-  ;;        owner              :owner}
-  ;;       (with-default-read stakeholder-table id
-  ;;         {:shares -1}
-  ;;         {holder :holder hold-shares :shares}
-  ;;         (enforce (not= (-1 hold-shares)))
-  ;;         (enforce (>= hold-shares shares) "Not Enough Shares")
-  ;;         (send me owner (* curr-price shares))
-  ;;         (update realestate-table token-id {:available-shares (+ available-shares shares)})
-  ;;         (update stakeholder-table id {:shares (- hold-shares shares)})))))
 
   (defn shares-of [token-id]
     (let [me (MSG_SENDER)]
@@ -175,23 +180,82 @@
         shares)))
 
   (defn dividend-one [per-share owner id]
-    (with-read
-      stakeholder-table id
+    (with-default-read stakeholder-table id
+      {:shares -1}
       {id :id holder :holder shares :shares}
-      (if (= id (get-hash token-id me))
-        (let [div (* per-share shares)]
-          (TRANSFER owner holder div)
-          div))))
+      (if (not= -1 shares)
+       (if (= id (get-hash token-id me))
+         (let [div (* per-share shares)]
+           (TRANSFER (CONTRACT-ADDRESS) holder div)
+           div)))))
   
   (defn token.dividend [token-id per-share]
     (with-read realestate-table token-id
-      {total-shares :total-shares owner :owner}
-      (let [per-share (/ amount total-shares)]
+      {available-shares :available-shares total-shares :total-shares owner :owner}
+      (let [total (* per-share total-shares)
+            hold (- total (* per-share available-shares))]
         ;; 校验总金额是为了解决除法不精确的问题？
         ;; 若出现除不尽则用户无法解决
         ;; 可以通过设置 maxAmount 来处理
+        (enforce (>= (MSG_VALUE) total))
+        (TRANSFER (MSG_SENDER) (CONTRACT-ADDRESS) total)
         (enforce (= (fold (+) 0
                           (map (dividend-one per-share owner)
-                               (keys stakeholder-table)))
-                    amount)))))
-)
+                               (get-accounts token-id)))
+                    total)))))
+
+  (defn token.redeem
+    ;; return msg.sender's balance to himself
+    [token-id redeem-amount]
+    (let [me (MSG_SENDER)
+          id (get-hash token-id me)]
+      (with-default-read balance-table id
+        {:amount -1}
+        {amount :amount}
+        (enforce (> amount redeem-amount) "not sufficient")
+        (TRANSFER (CONTRACT-ADDRESS) me amount))))
+
+  (defn token.deposit
+    [token-id amount]
+    (let [me (MSG_SENDER)
+          id (get-hash token-id me)]
+      (upsert-add balance-table id :amount amount))))
+
+
+(let [token-id (token.new "001" "my token" "SPV" "owner1" "info")
+      totol-shares 10000
+      buy-price 1.3
+      info "info1"
+      me (MSG_SENDER) ;; TODO assume me is admin
+      ]
+  
+  (token.startIssue token-id total-shares buy-price info)
+  ;; (token.stopIssue token-id)
+
+  (format "After ISSUE, contract balance ==> expected: 0, actually: {}" [(token.balance (CONTRACT-ADDRESS) token-id)])
+  (format "available-shares ==> expected: 10000, actually: {}" [(available-shares)])
+  (format "total-shares ==> expected: 9700, actually: {}" [(total-shares)])
+  (format "token.info ==>" (token.info))
+
+  (token.deposit token-id 500)
+  (format "After DEPOSIT, my balance ==> expected: 500, actually: {}" [(token.balance me token-id)])
+  
+  (token.buy token-id 300)
+
+  (format "After BUY, contract balance ==> expected: 390, actually: {}" [(token.balance me token-id)])
+  (format "BUY should not change balance: my shares ==> expected: 500, actually: {}" [(shares-of token-id)])
+  
+  (token.return token-id)
+
+  (format "RETURN should not change my balance, my balance ==> expected: 500, actually: {}" [(token.balance me token-id)])
+  (format "RETURN should not change stakeholder's shares: my shares ==> expected: 300, actually: {}" [(shares-of token-id)])
+
+  (token.dividend token-id 1)
+
+  (format "After DIVIDEND: contract balance ==> expected: 9970, actually: {}" [(token.balance (CONTRACT-ADDRESS) token-id)])
+  (format "DIVIDEND should not change stakeholder's balance: my balance ==> expected: 0, actually: {}" [(token.balance me token-id)])
+
+  (token.redeem token-id 200)
+  (format "After REDEEM, my balance ==> expected: 300, actually: {}" [(token.balance me token-id)])
+  (format "REDEEM should not change stakeholder's shares: my shares ==> expected: 300, actually: {}" [(shares-of token-id)])
+  )
