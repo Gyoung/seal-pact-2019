@@ -64,12 +64,8 @@ import Pact.Types.Version
 import Pact.Types.Hash
 import qualified Data.Set as S
 import Universum ((<>))
--- import Data.UUID as U (toByteString)
--- import qualified Data.UUID.V1 as U
-import qualified Data.UUID.V4 as U
+import qualified Data.UUID.V1 as U
 import Control.Monad.IO.Class
-
--- import           Criterion.Main
 
 -- | All production native modules.
 natives :: [NativeModule]
@@ -645,9 +641,12 @@ txHash _ [] = (tStr . asString) <$> view eeHash
 txHash i as = argsError i as
 
 uuid :: RNativeFun e
-uuid _ [] = do
-  nextId <- liftIO U.nextRandom
-  return $ toTerm $ T.pack $ show nextId
+uuid i [] = do
+  nextId <- liftIO U.nextUUID
+  nid <- case nextId of
+           Nothing -> evalError' i $ "request UUIDs too quickly"
+           Just tid -> return tid
+  return $ toTerm $ T.pack $ show nid
 uuid i as = argsError i as
 
 msgSender :: RNativeFun e
