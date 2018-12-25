@@ -56,8 +56,8 @@
   ;; use (hash [sender receiver]) as id
   ;;(deftable allowance-table ^{allowance})
 
-  (defn- get-hash [owner spender]
-    (hash [owner spender]))
+  ;; (defn- hash [owner spender]
+  ;;   (hash [owner spender]))
 
   (defn new
     [token-id name type owner info]
@@ -100,7 +100,7 @@
     ;; return balance of contract address to msg.sender
     [token-id]
     (let [me (MSG_SENDER)
-          id (get-hash token-id me)]
+          id (hash token-id me)]
       (enforce (= admin-address me) "need admin")
       (with-default-read balance-table id
         {:amount -1}
@@ -110,7 +110,7 @@
 
   (defn balance
     [addr token-id]
-    (with-readth-default-read balance-table (get-hash token-id addr)
+    (with-default-read balance-table (hash token-id addr)
       {:amount 0}
       {amount :amount}
       amount))
@@ -164,7 +164,7 @@
       (enforce (>= available-shares shares) "Insufficient Available Shares")
       (let [cost (* buy-price shares)
             me (MSG_SENDER)
-            id (get-hash token-id me)]
+            id (hash token-id me)]
         ;; (send owner me cost) ;; send to from value
         (TRANSFER me (CONTRACT-ADDRESS) cost)
         (upsert-add stakeholder-table id :shares shares)
@@ -172,7 +172,7 @@
 
   (defn shares-of [token-id]
     (let [me (MSG_SENDER)]
-      (with-read stakeholder-table (get-hash token-id me)
+      (with-read stakeholder-table (hash token-id me)
         {shares :shares}
         shares)))
 
@@ -181,7 +181,7 @@
       {:shares -1}
       {id :id holder :holder shares :shares}
       (if (not= -1 shares)
-       (if (= id (get-hash token-id me))
+       (if (= id (hash token-id me))
          (let [div (* per-share shares)]
            (TRANSFER (CONTRACT-ADDRESS) holder div)
            div)))))
@@ -205,7 +205,7 @@
     ;; return msg.sender's balance to himself
     [token-id redeem-amount]
     (let [me (MSG_SENDER)
-          id (get-hash token-id me)]
+          id (hash token-id me)]
       (with-default-read balance-table id
         {:amount -1}
         {amount :amount}
@@ -215,7 +215,7 @@
   (defn deposit
     [token-id amount]
     (let [me (MSG_SENDER)
-          id (get-hash token-id me)]
+          id (hash token-id me)]
       (upsert-add balance-table id :amount amount))))
 
 
