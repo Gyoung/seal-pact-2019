@@ -221,7 +221,7 @@ writeValue_ t wt k v s = do
   let ns = set (temp . tblType t . tbls) newTables s
   return $ (ns,())   
 
--- 先查处所以keys  先查table table为null，返回[],或者报错?
+-- 目前先查询全部keys
 queryKeys_ :: PactKey k => Table k -> Maybe (KeyQuery k) -> MPtreeDb -> IO (MPtreeDb,[k])
 queryKeys_ t _ s = do
   let tables = view (temp . tblType t . tbls) s
@@ -248,17 +248,45 @@ queryKeys_ t _ s = do
             let keys = map fst val
             let dataKeys = map mpKey2PackKey keys
             return $ dataKeys
-            -- return val
-      rks <- MM.keysM keysGetter (_tbl table)
-      return rks
-  -- let ks = liftArray mkeys
+      MM.keysM keysGetter (_tbl table)
   return $ (s,mkeys)
 
--- liftArray :: [a] -> a
--- liftArray [s] = s 
+-- 先查询全部(key,value)
+query_ :: (PactKey k, PactValue v) => Table k -> Maybe (KeyQuery k) -> MPtreeDb -> IO (MPtreeDb,[(k,v)])
+query_ t _ s = do
+  let tables = view (temp . tblType t . tbls) s
+  let  baseGetter :: PactKey k => Table k ->  IO (Maybe (Tbl k))
+       baseGetter tb = do
+        --table k 转换成mpkey
+        let mk = tableKey2MPKey tb 
+        -- 根据table k 查询对应的table stateroot
+        tid <- getKeyVal (_rootMPDB s) mk 
+        -- mpVal to  tal k
+        return $ mpValToTbl tid
+  mtbl <- MM.lookupM baseGetter t tables
+  mkeys <- case mtbl of 
+    --从mptree中读取 
+    Nothing     -> throwDbError $ "readValue: no such table: " ++ show t
+    Just table  -> do
+      let getter :: PactKey k => IO [(k,B.ByteString)]
+          getter = do
+            let tMpdb = _rootMPDB s
+            -- tal k 转换成mpdb
+            let mpdb = MPDB {rdb=(rdb tMpdb),stateRoot=(_tableStateRoot table)}
+            --获取对应value
+            val <- getAllKeyVals mpdb
+            kv  <- forM val $ \(k,v) -> do
+              let k1 = mpKey2PackKey k
+              return (k1,v)
+            return $ kv
+      MM.toListM getter (_tbl table)
+  ks <- forM mkeys $ \(k,v) -> do
+    let v1 = decode . BSL.fromStrict $ v
+    case v1 of 
+      Nothing -> throwDbError $ "decode value failed,value : " ++ show v
+      Just vv -> return (k,vv)
+  return $ (s,ks)
 
-query_ :: Table k -> Maybe (KeyQuery k) -> MPtreeDb -> IO (MPtreeDb,[(k,v)])
-query_ _ _ _ = undefined
 
 mpValToPv :: (PactValue v) => Maybe B.ByteString -> Maybe v
 mpValToPv (Just v)  = decode . BSL.fromStrict $ v
@@ -377,8 +405,8 @@ _test = do
     run (readValue p dt "tough") >>= (liftIO . (print :: Maybe Text -> IO ()))
     run (readValue p dt "stuff") >>= (liftIO . (print :: Maybe Value -> IO ()))
 
-    -- run (query p dt (Just (KQKey KEQ "stuff"))) >>=
-    --   (liftIO . (print :: [(DataKey,Value)] -> IO ()))
+    run (query p dt (Just (KQKey KEQ "stuff"))) >>=
+      (liftIO . (print :: [(DataKey,Value)] -> IO ()))
     run (queryKeys p dt (Just (KQKey KGTE "stuff"))) >>= liftIO . print
     -- run (query p tt (Just (KQKey KGT 0 `kAnd` KQKey KLT 2))) >>=
     --   (liftIO . (print :: [(TxKey,Value)] -> IO ()))
