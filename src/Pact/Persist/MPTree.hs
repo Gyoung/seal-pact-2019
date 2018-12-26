@@ -16,7 +16,8 @@ module Pact.Persist.MPTree
     rootMPDB,tableStateRoot,
     MPtreeDb(..),temp,
     initMPtreeDb,_test,
-    persister
+    persister,
+    usersMap,ketsetsMap,modulesMap
   ) where
 
 import Control.Lens hiding (op)
@@ -33,13 +34,15 @@ import           Seal.DB.MerklePatricia
 import           Pos.DB.Rocks.Functions                
 import           Pos.DB.Rocks.Types (DB (..))
 import           Seal.DB.MerklePatricia.Utils
-import           Universum (MonadFail)
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy as BSL
 
 import qualified Pos.Util.Modifier as MM
+import qualified Data.Map.Strict as M
 import Data.Text.Encoding
 import qualified Data.Text as T
+import qualified Data.NibbleString as NB
+import qualified Data.ByteString as BS
 
 
 --MM.Modifyer 保存某张表的修改  
@@ -57,10 +60,13 @@ makeLenses ''Tables
 -- 多余？
 data Db = Db {
   _dataTables :: !(Tables DataKey),
-  _txTables :: !(Tables TxKey)
+  _txTables :: !(Tables TxKey),
+  _usersMap   :: M.Map Text B.ByteString,
+  _ketsetsMap :: M.Map Text B.ByteString,
+  _modulesMap :: M.Map Text B.ByteString
   } deriving (Show)
 makeLenses ''Db
-instance Default Db where def = Db mempty mempty
+instance Default Db where def = Db mempty mempty mempty mempty mempty
 
 tblType :: Table k -> Lens' Db (Tables k)
 tblType DataTable {} = dataTables
@@ -215,8 +221,41 @@ writeValue_ t wt k v s = do
   let ns = set (temp . tblType t . tbls) newTables s
   return $ (ns,())   
 
-queryKeys_ :: Table k -> Maybe (KeyQuery k) -> MPtreeDb -> IO (MPtreeDb,[k])
-queryKeys_ _ _ _ = undefined
+-- 先查处所以keys  先查table table为null，返回[],或者报错?
+queryKeys_ :: PactKey k => Table k -> Maybe (KeyQuery k) -> MPtreeDb -> IO (MPtreeDb,[k])
+queryKeys_ t _ s = do
+  let tables = view (temp . tblType t . tbls) s
+  let  baseGetter :: PactKey k => Table k ->  IO (Maybe (Tbl k))
+       baseGetter tb = do
+        --table k 转换成mpkey
+        let mk = tableKey2MPKey tb 
+        -- 根据table k 查询对应的table stateroot
+        tid <- getKeyVal (_rootMPDB s) mk 
+        -- mpVal to  tal k
+        return $ mpValToTbl tid
+  mtbl <- MM.lookupM baseGetter t tables
+  mkeys <- case mtbl of 
+    --从mptree中读取 
+    Nothing     -> throwDbError $ "readValue: no such table: " ++ show t
+    Just table  -> do
+      let keysGetter :: PactKey k => IO [k]
+          keysGetter = do
+            let tMpdb = _rootMPDB s
+            -- tal k 转换成mpdb
+            let mpdb = MPDB {rdb=(rdb tMpdb),stateRoot=(_tableStateRoot table)}
+            --获取对应value
+            val <- getAllKeyVals mpdb
+            let keys = map fst val
+            let dataKeys = map mpKey2PackKey keys
+            return $ dataKeys
+            -- return val
+      rks <- MM.keysM keysGetter (_tbl table)
+      return rks
+  -- let ks = liftArray mkeys
+  return $ (s,mkeys)
+
+-- liftArray :: [a] -> a
+-- liftArray [s] = s 
 
 query_ :: Table k -> Maybe (KeyQuery k) -> MPtreeDb -> IO (MPtreeDb,[(k,v)])
 query_ _ _ _ = undefined
@@ -227,6 +266,10 @@ mpValToPv Nothing = Nothing
 
 mpValToTbl :: PactKey k => Maybe MPVal -> Maybe (Tbl k)
 mpValToTbl = fmap(\p -> Tbl {_tbl=mempty, _tableStateRoot=StateRoot p})
+
+mpKey2PackKey :: PactKey k => MPKey -> k
+mpKey2PackKey key = fromByteString bs
+  where bs = BS.pack . NB.unpack $ key
 
 pactKey2MPKey :: PactKey k => k -> MPKey
 pactKey2MPKey k = bytesToNibbleString $ toByteString k
@@ -243,11 +286,11 @@ setMptreeTables :: [(Table DataKey,Tbl DataKey)] -> MPDB -> IO MPDB
 setMptreeTables ((k,v):xs) mpdb = do
   let mpKey = tableKey2MPKey k
   let values = MM.insertions (_tbl v)
-  tid <- getMPtreeValue mpdb mpKey
+  tid <- getKeyVal mpdb mpKey
   tsr <- case tid of 
     Nothing -> setMPtreeValues values (MPDB {rdb=(rdb mpdb),stateRoot=emptyTriePtr})
     Just tv -> setMPtreeValues values (mpVal2MPDB (rdb mpdb) tv)
-  nst <- setMPtreeValue mpKey (mpdb2MPval tsr) mpdb
+  nst <- putKeyVal mpdb mpKey (mpdb2MPval tsr)
   setMptreeTables xs nst
 setMptreeTables [] mpdb = return mpdb
 
@@ -256,7 +299,7 @@ setMptreeTables [] mpdb = return mpdb
 setMPtreeValues :: [(DataKey,B.ByteString)] -> MPDB -> IO MPDB
 setMPtreeValues ((k,v):xs) mpdb = do
   let mpKey = dataKey2MPKey k
-  rs <- setMPtreeValue mpKey v mpdb
+  rs <- putKeyVal mpdb mpKey v
   --更新stateroot
   setMPtreeValues xs rs
 setMPtreeValues [] mpdb = return mpdb  
@@ -264,6 +307,7 @@ setMPtreeValues [] mpdb = return mpdb
 --Text -ByteString
 dataKey2MPKey :: DataKey -> MPKey
 dataKey2MPKey (DataKey k) = bytesToNibbleString $ encodeUtf8 k
+
 
 asByteString :: ToJSON v => v -> B.ByteString
 asByteString = BSL.toStrict . encode
@@ -273,20 +317,6 @@ mpdb2MPval (MPDB _ (StateRoot sr)) = sr
 
 mpVal2MPDB :: DB -> MPVal -> MPDB
 mpVal2MPDB db pval  = MPDB {rdb=db,stateRoot=(StateRoot pval)}
-
-
--- MPtree中获取值
-getMPtreeValue ::(MonadIO m,MonadFail m)=> MPDB -> MPKey -> m (Maybe MPVal)
-getMPtreeValue mpdb key  = do
-  v <- getKeyVal mpdb key
-  return $ v
-
--- MPtree中插入新的值
-setMPtreeValue :: MPKey -> MPVal -> MPDB -> IO MPDB
-setMPtreeValue k v mpdb = do
-  st <- putKeyVal mpdb k v
-  return $ st
-
 
 --queryKeys 先从map里面查，再从mptree里面查？
 
@@ -349,7 +379,7 @@ _test = do
 
     -- run (query p dt (Just (KQKey KEQ "stuff"))) >>=
     --   (liftIO . (print :: [(DataKey,Value)] -> IO ()))
-    -- run (queryKeys p dt (Just (KQKey KGTE "stuff"))) >>= liftIO . print
+    run (queryKeys p dt (Just (KQKey KGTE "stuff"))) >>= liftIO . print
     -- run (query p tt (Just (KQKey KGT 0 `kAnd` KQKey KLT 2))) >>=
     --   (liftIO . (print :: [(TxKey,Value)] -> IO ()))
     -- run $ beginTx p True

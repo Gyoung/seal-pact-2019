@@ -3,13 +3,26 @@
 -- import qualified PersistSpec
 -- import Pact.PersistPactDb.Regression
 -- import Control.Monad
-import Pact.Persist.MPTree
+import qualified Pact.Persist.MPTree as M
+-- import qualified Pact.Persist.Pure as P
+-- import qualified Pact.Persist.SQLite as T
+
 
 
 
 main :: IO ()
 -- main = hspec spec
-main = _test
+main = do
+    putStrLn "MPTree Test"
+    M._test
+    -- putStrLn ""
+    -- putStrLn "Pure Test"
+    -- P._test
+    -- putStrLn ""
+    -- putStrLn "SQLite Test"
+    -- T._test
+    -- PersistSpec.spec
+    return ()
 
 
 
