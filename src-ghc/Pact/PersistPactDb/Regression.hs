@@ -83,10 +83,10 @@ runRegression p = do
   --   _getTxLog pactdb usert (head tids) v
   _writeRow pactdb Insert usert "key2" (fmap toPersistable row) v
   assertEquals' "user insert key2 pre-rollback" (Just row) (fmap (fmap toTerm) <$> _readRow pactdb usert "key2" v)
-  -- assertEquals' "keys pre-rollback" ["key1","key2"] $ _keys pactdb user1 v
+  assertEquals' "keys pre-rollback" ["key1","key2"] $ _keys pactdb user1 v
   _rollbackTx pactdb v
   assertEquals' "rollback erases key2" Nothing $ _readRow pactdb usert "key2" v
-  -- assertEquals' "keys" ["key1"] $ _keys pactdb user1 v
+  assertEquals' "keys" ["key1"] $ _keys pactdb user1 v
   return v
 
 toTerm' :: ToTerm a => a -> Term Name
