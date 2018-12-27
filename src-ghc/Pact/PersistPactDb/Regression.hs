@@ -74,13 +74,13 @@ runRegression p = do
 
     (commit v)
   _t4 <- begin v t3
-  tids <- _txids pactdb user1 t1 v
-  assertEquals "user txids" [2] tids
-  assertEquals' "user txlogs"
-    [TxLog "USER_user1" "key1" row,
-     TxLog "USER_user1" "key1" row'] $
-    fmap (map (fmap (fmap toTerm))) $
-    _getTxLog pactdb usert (head tids) v
+  -- tids <- _txids pactdb user1 t1 v
+  -- assertEquals "user txids" [2] tids
+  -- assertEquals' "user txlogs"
+  --   [TxLog "USER_user1" "key1" row,
+  --    TxLog "USER_user1" "key1" row'] $
+  --   fmap (map (fmap (fmap toTerm))) $
+  --   _getTxLog pactdb usert (head tids) v
   _writeRow pactdb Insert usert "key2" (fmap toPersistable row) v
   assertEquals' "user insert key2 pre-rollback" (Just row) (fmap (fmap toTerm) <$> _readRow pactdb usert "key2" v)
   assertEquals' "keys pre-rollback" ["key1","key2"] $ _keys pactdb user1 v
