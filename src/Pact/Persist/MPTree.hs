@@ -292,9 +292,12 @@ mpValToPv Nothing = Nothing
 mpValToTbl :: PactKey k => Maybe MPVal -> Maybe (Tbl k)
 mpValToTbl = fmap(\p -> Tbl {_tbl=mempty, _tableStateRoot=StateRoot p})
 
+--B.tail 去掉第一个空格
 mpKey2PackKey :: PactKey k => MPKey -> k
 mpKey2PackKey key = fromByteString bs
-  where bs = termNibbleString2String True key
+  where bs = B.tail $ termNibbleString2String True key
+
+
 
 pactKey2MPKey :: PactKey k => k -> MPKey
 pactKey2MPKey k = bytesToNibbleString $ toByteString k
