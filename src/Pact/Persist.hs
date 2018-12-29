@@ -43,10 +43,13 @@ instance Show TxKey where show (TxKey k) = show k
 
 class (Ord k,Show k,Eq k,Hashable k) => PactKey k where
   toByteString :: k -> B.ByteString
+  fromByteString :: B.ByteString -> k
 instance PactKey TxKey where
   toByteString (TxKey t) = B.pack $ show t
+  fromByteString b = TxKey (read $ B.unpack b :: Integer)
 instance PactKey DataKey where
   toByteString (DataKey t) = encodeUtf8 t
+  fromByteString b = DataKey $ decodeUtf8 b
 
 
 type DataTable = Table DataKey
