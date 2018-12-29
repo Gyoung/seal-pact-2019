@@ -59,6 +59,23 @@
       (enforce (not= -1 balance) "not have account")
       balance))
 
+  (defn change-balance [token-id who]
+    (let [id (hash token-id who)]
+     (with-default-read balances-table id
+       {:balance -1}
+       {balance :balance}
+       (if (= -1 balance)
+         (insert balances-table id
+                 {:owner    to
+                  :token-id token-id
+                  :balance  amount})
+         (update balances-table id
+                 {:owner to
+                  :token-id token-id
+                  :balance (+ balance amount)})))))
+
+  ;; APIs
+  
   (defn issue [token-id init-supply]
     (with-default-read gf-table token-id
       {:total-supply -1}
@@ -67,26 +84,29 @@
       (insert gf-table token-id {:total-supply init-supply
                                  :available-supply init-supply})))
 
-  (defn mint [token-id amount]
+  (defn buy [token-id amount who]
     (let [me (MSG_SENDER)]
-     (with-default-read minters-table (hash token-id me)
-       {:minter ""}
-       {minter :minter}
-       (enforce (not= minter "") "need minter role")
-       (with-default-read gf-table token-id
-         {:total-supply -1}
-         {total-supply :total-supply}
-         (enforce (not= total-supply -1) "not yet issued")
-         (update gf-table token-id {:total-supply (+ total-supply amount)
-                                    :available-supply (+ available-supply amount)})
-         (emit-event (mint-event {:who me :amount amount}))))))
+      (enforce (= admin-address me) "need admin")
+      (with-default-read minters-table (hash token-id me)
+        {:minter ""}
+        {minter :minter}
+        (enforce (not= minter "") "need minter role")
+        (with-default-read gf-table token-id
+          {:total-supply -1}
+          {total-supply :total-supply}
+          (enforce (not= total-supply -1) "not yet issued")
+          (update gf-table token-id {:total-supply     (+ total-supply amount)
+                                     :available-supply (+ available-supply amount)})
+          (change-balance token-id who amount)
+          (emit-event (mint-event {:who me :amount amount}))))))
 
-  (defn burn [token-id amount]
+  (defn consume [token-id amount who]
     (let [me (MSG_SENDER)]
-     (with-default-read burners-table (hash token-id me)
+      (enforce (= admin-address me) "need admin")
+      (with-default-read burners-table (hash token-id me)
        {:burner ""}
        {burner :burner}
-       (enforce (not= minter "") "need burner role")
+       (enforce (not= burner "") "need burner role")
        (with-default-read gf-table token-id
          {:total-supply -1}
          {total-supply :total-supply
@@ -95,6 +115,7 @@
          (enforce (>= available-supply amount) "Insufficient supply")
          (update gf-table token-id {:total-supply (- total-supply amount)
                                     :available-supply (- available-supply amount)})
+         (change-balance token-id who (- 0 amount))
          (emit-event (burn-event {:who me :amount amount}))))))
 
   (defn dispatch [token-id amount to]
@@ -122,3 +143,15 @@
           (emit-event (dispatch-event {:from me :to to :amount amount}))))))
   
 )
+
+(let [token-id "xxxx"
+      init-supply 10000
+      user "yyyy"]
+  ;; as-admin
+  
+  (issue token-id 10000)
+  (dispatch token-id 200 user)
+  (buy token-id 3000 user)
+  (consume token-id 200 user)
+  (consume tokne-id))
+
