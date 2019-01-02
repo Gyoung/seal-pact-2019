@@ -75,9 +75,10 @@ data MPtreeDb = MPtreeDb {
   }
 makeLenses ''MPtreeDb
 
-initMPtreeDb :: IO MPtreeDb
-initMPtreeDb = do
-  db <- openRocksDB "/tmp/contract"
+-- path: mptree路径
+initMPtreeDb :: FilePath -> IO MPtreeDb
+initMPtreeDb path = do
+  db <- openRocksDB path
   let rdb' = MPDB {rdb=db,stateRoot=emptyTriePtr}
   initializeBlank rdb'
   return $ MPtreeDb def rdb'
@@ -375,7 +376,7 @@ mpVal2MPDB db pval  = MPDB {rdb=db,stateRoot=(StateRoot pval)}
 
 _test :: IO ()
 _test = do
-  e <- initMPtreeDb
+  e <- initMPtreeDb "/tmp/contract"
   let p = persister
       dt = DataTable "22222"
       -- tt = TxTable "tx"

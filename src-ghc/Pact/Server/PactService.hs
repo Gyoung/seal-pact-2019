@@ -52,7 +52,7 @@ initPactService CommandConfig {..} loggers = do
   case _ccSqlite of
     Nothing -> do
       klog "Initializing pure pact"
-      mkMPtreeEnv loggers >>= mkCEI
+      mkMPtreeEnv loggers "/tmp/contract" >>= mkCEI
     Just sqlc -> do
       klog "Initializing pact SQLLite"
       mkSQLiteEnv logger True sqlc loggers >>= mkCEI

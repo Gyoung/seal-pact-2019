@@ -107,9 +107,9 @@ mkSQLiteEnv initLog deleteOldFile c loggers = do
 mkPureEnv :: Loggers -> IO (PactDbEnv (DbEnv Pure.PureDb))
 mkPureEnv loggers = mkPactDbEnv pactdb $ initDbEnv loggers Pure.persister Pure.initPureDb
 
-mkMPtreeEnv :: Loggers -> IO (PactDbEnv (DbEnv MP.MPtreeDb))
-mkMPtreeEnv loggers = do
-  mpDb <- MP.initMPtreeDb
+mkMPtreeEnv :: Loggers -> FilePath -> IO (PactDbEnv (DbEnv MP.MPtreeDb))
+mkMPtreeEnv loggers path = do
+  mpDb <- MP.initMPtreeDb path
   mkPactDbEnv pactdb $ initDbEnv loggers MP.persister mpDb
 
 

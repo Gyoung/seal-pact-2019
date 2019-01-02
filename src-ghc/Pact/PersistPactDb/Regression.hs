@@ -119,6 +119,6 @@ regressPure = do
 
 regressMPtree :: IO (MVar (DbEnv MP.MPtreeDb))
 regressMPtree = do
-  mpDb <- MP.initMPtreeDb
+  mpDb <- MP.initMPtreeDb "/tmp/contract"
   let e = initDbEnv alwaysLog MP.persister mpDb
   runRegression e

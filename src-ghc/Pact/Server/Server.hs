@@ -15,6 +15,9 @@
 module Pact.Server.Server
   ( serve
   , setupServer
+  , initFastLogger
+  , usage
+  , Config (..)
   ) where
 
 import Control.Concurrent
