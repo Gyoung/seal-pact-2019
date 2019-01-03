@@ -47,17 +47,12 @@
   (defn change-balance [token-id who]
     (let [id (hash token-id who)]
      (with-default-read balances-table id
-       {:balance -1}
+       {:balance 0}
        {balance :balance}
-       (if (= -1 balance)
-         (insert balances-table id
-                 {:owner    to
-                  :token-id token-id
-                  :balance  amount})
-         (update balances-table id
-                 {:owner to
-                  :token-id token-id
-                  :balance (+ balance amount)})))))
+       (write balances-table id
+              {:owner    to
+               :token-id token-id
+               :balance  (+ balance amount)}))))
 
   ;; APIs
   

@@ -145,17 +145,13 @@
     (update realestate-table token-id
             {:buy-price buy-price :sell-price sell-price}))
 
-  (defn- upsert-add-balance-table [key field amount k1 v1 k2 v2]
-    (with-default-read balance-table key {field -1} {old-amount field}
-      (if (= -1 old-amount)
-        (insert table key {field amount k1 v1 k2 v2})
-        (update table key {field (+ amount old-amount)}))))
+  (defn- upsert-add-stakeholder-table [key field amount k1 v1 k2 v2]
+    (with-default-read stakeholder-table key {field 0} {old-amount field}
+      (write table key {field (+ amount old-amount) k1 v1 k2 v2})))
 
-  (defn- upsert-add-stakeholder-table [key field amount]
-    (with-default-read stakeholder-table key {field -1} {old-amount field}
-      (if (= -1 old-amount)
-        (insert table key {field amount})
-        (update table key {field (+ amount old-amount)}))))
+  (defn- upsert-add-balance-table [key field amount]
+    (with-default-read balance-table key {field 0} {old-amount field}
+      (write table key {field (+ amount old-amount)})))
 
   (defn buy [token-id shares]
     (enforce (>= shares 300) "Invalid Shares")
