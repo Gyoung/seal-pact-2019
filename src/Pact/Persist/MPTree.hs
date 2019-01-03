@@ -15,7 +15,7 @@ module Pact.Persist.MPTree
     Db(..),dataTables,txTables,
     rootMPDB,tableStateRoot,
     MPtreeDb(..),temp,
-    initMPtreeDb,_test,
+    initMPtreeDb,initMPtree,_test,
     persister,
     usersMap,ketsetsMap,modulesMap
   ) where
@@ -82,6 +82,9 @@ initMPtreeDb path = do
   let rdb' = MPDB {rdb=db,stateRoot=emptyTriePtr}
   initializeBlank rdb'
   return $ MPtreeDb def rdb'
+
+initMPtree :: MPDB -> MPtreeDb
+initMPtree mpdb = MPtreeDb def mpdb
 
 persister :: Persister MPtreeDb
 persister = Persister {
