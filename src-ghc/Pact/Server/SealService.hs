@@ -9,6 +9,7 @@ module Pact.Server.SealService
     initSealPactService
    ,initSealContract
    ,execSealPactCommand
+   ,CommandExecHandler(..)
  ) where
 
 
@@ -30,7 +31,8 @@ import Data.Default
 import Seal.DB.MerklePatricia
 import Data.ByteString (ByteString)
 import qualified Data.Map.Strict as M
-
+import Pact.Types.Hash
+import Control.Concurrent (threadDelay)
 
 
 
@@ -55,13 +57,15 @@ initSealPactService verbose mpdb = do
     p <- mkMPtreeEnv loggers mpdb
     klog "Creating Pact Schema"
     initSchema p
+    threadDelay 5000000 --测试用
     -- 暴露出外部接口
     cmdVar <- newMVar (CommandState initRefStore M.empty)
     let handler = CommandExecHandler {
         _applyCmd = \cmd -> applyCmd logger (Just (EntityName "entity")) p cmdVar gasEnv (Transactional 1) cmd (verifyCommand cmd)
       }
     -- 初始化内置合约
-    _ <- execSealPactCommand handler initSealContract
+    result <- execSealPactCommand handler initSealContract
+    klog $ show result
     -- _ <- _applyCmd initSealContract
     return handler
     
@@ -70,14 +74,14 @@ initSealPactService verbose mpdb = do
 -- 初始化内置合约
 initSealContract :: Command ByteString
 initSealContract = Command {
-    _cmdPayload = sealControl
+    _cmdPayload = sealContract
    ,_cmdSigs    = []
-   ,_cmdHash    = undefined
+   ,_cmdHash    = hash "123"
 }
 
 
-sealControl :: ByteString
-sealControl = 
+sealContract :: ByteString
+sealContract = 
   "(env-data {\"admin-keyset\" { \"keys\" [\"mockAdminKey\"]} } ) \n\
   \(env-keys [\"mockAdminKey\"]) \n\
   \(define-keyset 'admin-keyset (read-keyset \"admin-keyset\")) \n\
