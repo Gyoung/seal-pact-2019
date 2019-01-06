@@ -46,7 +46,7 @@ class (Ord k,Show k,Eq k,Hashable k) => PactKey k where
   fromByteString :: B.ByteString -> k
 instance PactKey TxKey where
   toByteString (TxKey t) = B.pack $ show t
-  fromByteString b = TxKey (read $ B.unpack b :: Integer)
+  fromByteString b = TxKey ((read $ B.unpack b) :: Integer)
 instance PactKey DataKey where
   toByteString (DataKey t) = encodeUtf8 t
   fromByteString b = DataKey $ decodeUtf8 b

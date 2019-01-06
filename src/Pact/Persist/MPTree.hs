@@ -15,7 +15,7 @@ module Pact.Persist.MPTree
     Db(..),dataTables,txTables,
     rootMPDB,tableStateRoot,
     MPtreeDb(..),temp,
-    initMPtreeDb,_test,
+    initMPtreeDb,initMPtree,_test,
     persister,
     usersMap,ketsetsMap,modulesMap
   ) where
@@ -40,9 +40,6 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Pos.Util.Modifier as MM
 import qualified Data.Map.Strict as M
 import Data.Text.Encoding
-import qualified Data.Text as T
-import qualified Data.NibbleString as NB
-import qualified Data.ByteString as BS
 
 
 --MM.Modifyer 保存某张表的修改  
@@ -78,12 +75,16 @@ data MPtreeDb = MPtreeDb {
   }
 makeLenses ''MPtreeDb
 
-initMPtreeDb :: IO MPtreeDb
-initMPtreeDb = do
-  db <- openRocksDB "/tmp/contract"
+-- path: mptree路径
+initMPtreeDb :: FilePath -> IO MPtreeDb
+initMPtreeDb path = do
+  db <- openRocksDB path
   let rdb' = MPDB {rdb=db,stateRoot=emptyTriePtr}
   initializeBlank rdb'
   return $ MPtreeDb def rdb'
+
+initMPtree :: MPDB -> MPtreeDb
+initMPtree mpdb = MPtreeDb def mpdb
 
 persister :: Persister MPtreeDb
 persister = Persister {
@@ -295,9 +296,12 @@ mpValToPv Nothing = Nothing
 mpValToTbl :: PactKey k => Maybe MPVal -> Maybe (Tbl k)
 mpValToTbl = fmap(\p -> Tbl {_tbl=mempty, _tableStateRoot=StateRoot p})
 
+--B.tail 去掉第一个空格
 mpKey2PackKey :: PactKey k => MPKey -> k
 mpKey2PackKey key = fromByteString bs
-  where bs = BS.pack . NB.unpack $ key
+  where bs = B.tail $ termNibbleString2String True key
+
+
 
 pactKey2MPKey :: PactKey k => k -> MPKey
 pactKey2MPKey k = bytesToNibbleString $ toByteString k
@@ -375,7 +379,7 @@ mpVal2MPDB db pval  = MPDB {rdb=db,stateRoot=(StateRoot pval)}
 
 _test :: IO ()
 _test = do
-  e <- initMPtreeDb
+  e <- initMPtreeDb "/tmp/contract"
   let p = persister
       dt = DataTable "22222"
       -- tt = TxTable "tx"
@@ -391,13 +395,13 @@ _test = do
     -- run $ createTable p tt
     run $ commitTx p
     run $ beginTx p True
-    run $ writeValue p dt Insert "stuff" (T.pack "hello")
+    run $ writeValue p dt Insert "stuff1" (String "hello")
     run $ writeValue p dt Insert "tough" (String "goodbye")
 
     -- run $ writeValue p tt Write 1 (String "txy goodness")
     -- run $ writeValue p tt Insert 2 (String "txalicious")
     run $ commitTx p
-    run $ writeValue p dt Insert "stuff1" (String "hello")
+    -- run $ writeValue p dt Insert "stuff1" (String "hello")
     -- run $ writeValue p dt Insert "stuff1" (String "hello")
 
     -- run $ createTable p dt
