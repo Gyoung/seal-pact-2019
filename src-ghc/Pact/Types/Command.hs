@@ -55,11 +55,11 @@ import Data.Text hiding (filter, all)
 import Data.Hashable (Hashable)
 import qualified Data.Set as S
 
-
 import GHC.Generics
 import Prelude
 
 import Pact.Types.Runtime
+import Pact.Types.Term as T
 import Pact.Types.Orphans ()
 import Pact.Types.Crypto as Base
 import Pact.Types.Hash
@@ -68,7 +68,7 @@ import Pact.Types.RPC
 
 data Command a = Command
   { _cmdPayload :: !a
-  , _cmdSigs :: ![UserSig]
+  , _cmdSigs :: ![T.PublicKey]
   , _cmdHash :: !Hash
   } deriving (Eq,Show,Ord,Generic,Functor,Foldable,Traversable)
 instance (Serialize a) => Serialize (Command a)
@@ -87,14 +87,14 @@ instance (FromJSON a) => FromJSON (Command a) where
 
 instance NFData a => NFData (Command a)
 
-mkCommand :: ToJSON a => [(PPKScheme, PrivateKey, Base.PublicKey)] -> Maybe Address -> Text -> a -> Command ByteString
-mkCommand creds addy nonce a = mkCommand' creds $ BSL.toStrict $ A.encode (Payload a nonce addy)
+mkCommand :: ToJSON a => [(T.PublicKey)] -> Maybe Address -> Text -> a -> Command ByteString
+mkCommand pk addy nonce a = mkCommand' pk $ BSL.toStrict $ A.encode (Payload a nonce addy)
 
-mkCommand' :: [(PPKScheme, PrivateKey, Base.PublicKey)] -> ByteString -> Command ByteString
-mkCommand' creds env = Command env (sig <$> creds) hsh
+mkCommand' :: [(T.PublicKey)] -> ByteString -> Command ByteString
+mkCommand' pk env = Command env pk hsh
   where
     hsh = hash env
-    sig (scheme, sk, pk) = UserSig scheme (toB16Text $ exportPublic pk) (toB16Text $ exportSignature $ sign hsh sk pk)
+    -- sig (scheme, sk, pk) = UserSig scheme (toB16Text $ exportPublic pk) (toB16Text $ exportSignature $ sign hsh sk pk)
 
 
 
@@ -106,10 +106,10 @@ verifyCommand orig@Command{..} = case (ppcmdPayload', ppcmdHash', mSigIssue) of
     ppcmdPayload' = traverse (traverse parsePact) =<< A.eitherDecodeStrict' _cmdPayload
     parsePact :: Text -> Either String ParsedCode
     parsePact code = ParsedCode code <$> parseExprs code
-    (ppcmdSigs' :: [(UserSig,Bool)]) = (\u -> (u,verifyUserSig _cmdHash u)) <$> _cmdSigs
+    -- (ppcmdSigs' :: [(UserSig,Bool)]) = (\u -> (u,verifyUserSig _cmdHash u)) <$> _cmdSigs
     ppcmdHash' = verifyHash _cmdHash _cmdPayload
-    mSigIssue = if all snd ppcmdSigs' then Nothing
-      else Just $ "Invalid sig(s) found: " ++ show (A.encode . fst <$> filter (not.snd) ppcmdSigs')
+    mSigIssue = Nothing
+      -- else Just $ "Invalid sig(s) found: " ++ show (A.encode . fst <$> filter (not.snd) ppcmdSigs')
     toErrStr :: Either String a -> String
     toErrStr (Right _) = ""
     toErrStr (Left s) = s ++ "; "

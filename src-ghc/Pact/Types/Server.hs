@@ -22,7 +22,7 @@
 -- Types specific to the HTTP server and Pact service.
 --
 module Pact.Types.Server
-  ( userSigToPactPubKey, userSigsToPactKeySet
+  ( userSigsToPactKeySet
   , CommandConfig(..), ccSqlite, ccEntity, ccGasLimit, ccGasRate
   , CommandPact(..), cpTxId, cpContinuation, cpStepCount, cpStep, cpYield
   , CommandState(..), csRefStore, csPacts
@@ -50,7 +50,7 @@ import Data.String
 import Data.ByteString (ByteString)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
-import Data.Text.Encoding
+-- import Data.Text.Encoding
 import Data.Aeson
 
 import Data.HashSet (HashSet)
@@ -65,11 +65,11 @@ import Pact.Types.Command
 import Pact.Types.Logger
 import Pact.Interpreter
 
-userSigToPactPubKey :: UserSig -> Pact.PublicKey
-userSigToPactPubKey UserSig{..} = Pact.PublicKey $ encodeUtf8 _usPubKey
+-- userSigToPactPubKey :: UserSig -> Pact.PublicKey
+-- userSigToPactPubKey UserSig{..} = Pact.PublicKey $ encodeUtf8 _usPubKey
 
-userSigsToPactKeySet :: [UserSig] -> S.Set Pact.PublicKey
-userSigsToPactKeySet = S.fromList . fmap userSigToPactPubKey
+userSigsToPactKeySet :: [Pact.PublicKey] -> S.Set Pact.PublicKey
+userSigsToPactKeySet = S.fromList 
 
 
 data CommandConfig = CommandConfig {

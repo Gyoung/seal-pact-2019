@@ -108,8 +108,9 @@ benchReadValue (TxTable _t) _k = rcp Nothing
 
 main :: IO ()
 main = do
-  !pub <- eitherDie $ fromText' "0c99d911059580819c6f39ca5c203364a20dbf0a02b0b415f8ce7b48ba3a5bad"
-  !priv <- eitherDie $ fromText' "6c938ed95a8abf99f34a1b5edd376f790a2ea8952413526af91b4c3eb0331b3c"
+  -- !pub <- eitherDie $ fromText' "0c99d911059580819c6f39ca5c203364a20dbf0a02b0b415f8ce7b48ba3a5bad"
+  -- !priv <- eitherDie $ fromText' "6c938ed95a8abf99f34a1b5edd376f790a2ea8952413526af91b4c3eb0331b3c"
+  let pub = PublicKey "0c99d911059580819c6f39ca5c203364a20dbf0a02b0b415f8ce7b48ba3a5bad"
   !parsedExps <- force <$> mapM (mapM (eitherDie . parseExprs)) exps
   !pureDb <- mkPureEnv neverLog
   initSchema pureDb
@@ -122,7 +123,7 @@ main = do
   !mockPersistDb <- mkMockPersistEnv neverLog def { mockReadValue = MockReadValue benchReadValue }
   !mpdbRS <- loadBenchModule mockPersistDb
   print =<< runPactExec mockPersistDb mpdbRS benchCmd
-  !cmds <- return $!! (`fmap` exps) $ fmap $ \t -> mkCommand' [(ED25519,pub,priv)]
+  !cmds <- return $!! (`fmap` exps) $ fmap $ \t -> mkCommand' [(pub)]
               (toStrict $ encode (Payload (Exec (ExecMsg t Null)) "nonce" Nothing))
 
   defaultMain [

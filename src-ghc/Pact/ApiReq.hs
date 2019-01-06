@@ -43,17 +43,18 @@ import qualified Data.Set as S
 
 import Crypto.Ed25519.Pure
 
-import Pact.Types.Crypto
+-- import Pact.Types.Crypto
 import Pact.Types.Util
 import Pact.Types.Command
 import Pact.Types.RPC
 import Pact.Types.Runtime hiding (PublicKey)
+import Pact.Types.Term as T
 import Pact.Types.API
 
 
 data KeyPair = KeyPair {
   _kpSecret :: PrivateKey,
-  _kpPublic :: PublicKey
+  _kpPublic :: T.PublicKey
   } deriving (Eq,Show,Generic)
 instance ToJSON KeyPair where toJSON = lensyToJSON 3
 instance FromJSON KeyPair where parseJSON = lensyParseJSON 3
@@ -122,7 +123,7 @@ mkExec code mdata addy kps ridm = do
   rid <- maybe (show <$> getCurrentTime) return ridm
   return $ decodeUtf8 <$>
     mkCommand
-    (map (\KeyPair {..} -> (ED25519,_kpSecret,_kpPublic)) kps)
+    (map (\KeyPair {..} -> (_kpPublic)) kps)
     addy
     (pack $ show rid)
     (Exec (ExecMsg (pack code) mdata))
@@ -162,7 +163,7 @@ mkCont txid step rollback mdata addy kps ridm = do
   rid <- maybe (show <$> getCurrentTime) return ridm
   return $ decodeUtf8 <$>
     mkCommand
-    (map (\KeyPair {..} -> (ED25519,_kpSecret,_kpPublic)) kps)
+    (map (\KeyPair {..} -> (_kpPublic)) kps)
     addy
     (pack $ show rid)
     (Continuation (ContMsg txid step rollback mdata) :: (PactRPC ContMsg))
