@@ -53,10 +53,10 @@ crFromField rk tid cr = CommandResult rk tid v
       Left err -> error $ "crFromField: unable to decode CommandResult from database! " ++ show err ++ "\n" ++ show cr
       Right v' -> v'
 
-userSigsToField :: [UserSig] -> SType
+userSigsToField :: [PublicKey] -> SType
 userSigsToField us = SText $ Utf8 $ BSL.toStrict $ A.encode us
 
-userSigsFromField :: ByteString -> [UserSig]
+userSigsFromField :: ByteString -> [PublicKey]
 userSigsFromField us = case A.eitherDecodeStrict' us of
   Left err -> error $ "userSigsFromField: unable to decode [UserSigs] from database! " ++ show err ++ "\n" ++ show us
   Right v -> v
