@@ -298,6 +298,10 @@ langDefs =
      ,defRNative "emit-event" emitEvent (funType tTyString [("event",eventTy ),("object",obj)])
      "emit event" 
 
+     ,defRNative "gd-send" gdSend (funType a [("fromAccount",tTyString),("toAccount",tTyString),("amount",tTyInteger)])
+     "send GoldDollar,eg:gd-send(fromAccount, toAccount, amount)" 
+
+
     ,defNative (specialForm Bind) bind
      (funType a [("src",tTyObject row),("binding",TySchema TyBinding row)])
      "Special form evaluates SRC to an object which is bound to with BINDINGS over subsequent body statements. \
@@ -664,6 +668,13 @@ emitEvent i [tv@TEvent {..},TObject ps _ _] = do
   void $ checkUserType False (_faInfo i) ps (TyUser tv)
   return $ toTerm $ "emit-event " <> asString _tEventName
 emitEvent i as = argsError i as
+
+--稳定币转账，待实现
+gdSend :: RNativeFun e
+gdSend _ [TLitString fromAccount,TLitString toAccount,TLitInteger amount] = do
+  --todo 打印出内容，待实现
+  return $ toTerm $ "send GoldDollar from " <> fromAccount <> " to " <> toAccount <> " amount:" <> (T.pack $ show amount)
+gdSend i as = argsError i as
 
 -- | Change of base for Text-based representations of integrals. Only bases
 -- 2 through 16 are supported, for non-empty text of length <= 128
