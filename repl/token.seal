@@ -127,9 +127,11 @@
        (enforce (>= from-shares amount) "Insufficient shares for transfer")
        (write stakeholder-table from-id {:shares (- from-shares amount)})
        (with-default-read stakeholder-table to-id
-         {:shares 0}
+         {:shares -1}
          {to-shares :shares}
-         (write stakeholder-table to-id {:shares (+ to-shares amount)})))))
+         (if (= to-shares -1)
+           (insert stakeholder-table to-id {:shares to-shares :token-id token-id :holder to})
+           (write stakeholder-table to-id {:shares (+ to-shares amount)}))))))
 
   (defn send
     [token-id from to amount]
