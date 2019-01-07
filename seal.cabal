@@ -32,7 +32,6 @@ library
                      , Pact.PersistPactDb
                      , Pact.Persist
                      , Pact.Persist.Pure
-                     , Pact.Persist.MPTree
                      , Pact.Repl
                      , Pact.Repl.Lib
                      , Pact.Repl.Types
@@ -104,7 +103,6 @@ library
       Pact.Server.History.Service
       Pact.Server.History.Types
       Pact.Server.PactService
-      Pact.Server.SealService
       Pact.Server.Server
       Pact.Types.API
       Pact.Types.Command
@@ -154,9 +152,6 @@ library
                      , vector-space >= 0.10.4 && < 0.14
                      , mmorph >= 1.1 && < 1.2
                      , universum
-                     , cardano-sl-db
-                     , cardano-sl-binary
-                     , cardano-sl-util
                      , nibblestring
                      , uuid
 
@@ -211,7 +206,7 @@ executable bench
 
 test-suite hspec
   type:             exitcode-stdio-1.0
-  main-is:          SealMPtree.hs
+  main-is:          hspec.hs
   hs-source-dirs:   tests
   default-language: Haskell2010
   ghc-options:      -Wall -threaded -rtsopts -O2 -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
@@ -241,9 +236,6 @@ test-suite hspec
               , hw-hspec-hedgehog == 0.1.*
               , intervals
               , universum
-              , cardano-sl-db
-              , cardano-sl-binary
-              , cardano-sl-util
               
   if !impl(ghcjs)
     build-depends:
