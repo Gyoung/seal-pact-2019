@@ -136,8 +136,8 @@
   (defn send
     [token-id from to amount]
     (with-read tokens-table token-id
-      {type :type owner :owner}
-      (if (= type "SPV")
+      {sendable :sendable owner :owner}
+      (if (= sendable "true")
         (transfer token-id from to amount)
         ;; else, (= type "CREDITS")
         (if (or (= owner from)
@@ -146,6 +146,3 @@
           (enforce (= 1 0) "either of 'from' or 'to' must be owner")))))
 
 )
-
-
-
