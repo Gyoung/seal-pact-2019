@@ -20,6 +20,9 @@ import Pact.Eval
 import Pact.Native.Internal
 import Pact.Types.Runtime
 import Universum ((<>))
+import Data.Set (member)
+import qualified Data.ByteString.Char8 as BS
+
 
 readKeysetDef :: NativeDef
 readKeysetDef =
@@ -52,9 +55,8 @@ keyDefs =
      "Special form to enforce KEYSET-OR-NAME against message keys before running BODY. \
      \KEYSET-OR-NAME can be a symbol of a keyset name or a keyset object. \
      \`$(with-keyset 'admin-keyset ...)` `$(with-keyset (read-keyset \"keyset\") ...)`"
-    ,defRNative "enforce-key" enforceKey' (funType tTyBool [("keyset-or-name",mkTyVar "k" [tTyString,tTyKeySet])])
-     "Special form to enforce KEYSET-OR-NAME against message keys before running BODY. \
-     \KEYSET-OR-NAME can be a symbol of a keyset name or a keyset object. \
+    ,defRNative "enforce-key" enforceKey' (funType tTyBool [("key",mkTyVar "k" [tTyString])])
+     "Special form to enforce KEY against message keys before running BODY. \
      \`$(with-keyset 'admin-keyset ...)` `$(with-keyset (read-keyset \"keyset\") ...)`"
     ,defKeyPred KeysAll (==)
      "Keyset predicate function to match all keys in keyset. `(keys-all 3 3)`"
@@ -95,18 +97,12 @@ enforceKeyset' i _as = argsError i []
 
 
 enforceKey' :: RNativeFun e
-enforceKey' i [t] = do
-  (ksn,ks) <- case t of
-    TLitString name -> do
-      let ksn = KeySetName name
-      ksm <- readRow (_faInfo i) KeySets ksn
-      case ksm of
-        Nothing -> evalError' i $ "Keyset not found: " ++ show name
-        Just ks -> return (Just ksn,ks)
-    TKeySet ks _ -> return (Nothing,ks)
-    _ -> argsError i [t,toTerm ("[body...]" :: Text)]
-  runPure $ enforceKey (_faInfo i) ksn ks
-  return $ toTerm True
+enforceKey' i [TLitString key] = do
+  let pk = PublicKey $ BS.pack $ show key
+  sigs <- view eeMsgSigs
+  if (member pk sigs) 
+    then return $ toTerm True
+  else evalError' i $ "Key not found: " ++ show key
 enforceKey' i _as = argsError i []
 
 

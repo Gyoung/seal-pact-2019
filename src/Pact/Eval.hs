@@ -30,7 +30,7 @@ module Pact.Eval
     ,evalBeginTx,evalRollbackTx,evalCommitTx
     ,reduce,reduceBody
     ,resolveFreeVars,resolveArg
-    ,enforceKeySet,enforceKeySetName,enforceKey
+    ,enforceKeySet,enforceKeySetName
     ,checkUserType
     ,deref
     ,installModule
@@ -113,29 +113,6 @@ enforceKeySet i ksn KeySet{..} = do
                                | otherwise -> failTx i $ "Keyset failure: " ++ maybe "[dynamic]" show ksn
         _ -> evalError i $ "Invalid response from keyset predicate: " ++ show r
 {-# INLINE enforceKeySet #-}
-
-enforceKey :: PureNoDb e => Info ->
-           Maybe KeySetName -> KeySet -> Eval e ()
-enforceKey i ksn KeySet{..} = do
-  sigs <- view eeMsgSigs
-  let count = length _ksKeys
-      matched = S.size $ S.intersection (S.fromList _ksKeys) sigs
-      failed = failTx i $ "Keyset failure1 (" ++ show _ksPredFun ++ ")" ++ maybe "" (": " ++) (fmap show ksn)
-      runBuiltIn p | p count matched = return ()
-           | otherwise = failed
-      atLeast t m = m >= t
-  case M.lookup _ksPredFun keyPredBuiltins of
-    Just _ -> runBuiltIn (\_ m -> atLeast 1 m)
-    Nothing -> do
-      let app = TApp (TVar _ksPredFun def)
-                [toTerm count,toTerm matched] i
-      app' <- instantiate' <$> resolveFreeVars i (abstract (const Nothing) app)
-      r <- reduce app'
-      case r of
-        (TLiteral (LBool b) _) | b -> return ()
-                           | otherwise -> failTx i $ "Keyset failure2: " ++ maybe "[dynamic]" show ksn
-        _ -> evalError i $ "Invalid response from keyset predicate: " ++ show r
-{-# INLINE enforceKey #-}
 
 -- Hoist Name back to ref
 liftTerm :: Term Name -> Term Ref
