@@ -11,7 +11,7 @@ module Pact.Persist.SQLite
    Pragma(..))
   where
 
-import Control.Arrow
+-- import Control.Arrow
 import Control.Monad
 import Data.Aeson
 import qualified Data.Map.Strict as M
@@ -86,7 +86,7 @@ persister = Persister {
   }
 
 data KeyTys k = KeyTys {
-  textTy :: Utf8,
+  -- textTy :: Utf8,
   inFun :: k -> SType,
   outTy :: RType,
   outFun :: SType -> IO k
@@ -117,9 +117,9 @@ expectTwo _ [a,b] = return (a,b)
 expectTwo desc v = throwDbError $ "Expected two-" ++ desc ++ " result, got: " ++ show v
 
 kTextTys :: KeyTys DataKey
-kTextTys = KeyTys "text" (SText . toUtf8 . asString) RText decodeText
+kTextTys = KeyTys  (SText . toUtf8 . asString) RText decodeText
 kIntTys :: KeyTys TxKey
-kIntTys = KeyTys "int" (SInt . fromIntegral) RInt decodeInt
+kIntTys = KeyTys  (SInt . fromIntegral) RInt decodeInt
 
 kTys :: Table k -> KeyTys k
 kTys DataTable {} = kTextTys
@@ -133,14 +133,13 @@ createTable' t e = do
   log e "DDL" $ "createTable: " ++ show t
   let tn = tableName t
   exec_ (conn e) $
-    "CREATE TABLE " <> tn <>
-    " (key " <> textTy (kTys t) <> " PRIMARY KEY NOT NULL UNIQUE, value TEXT);"
+    "CREATE TABLE PRIMARY KEY NOT NULL UNIQUE, value TEXT);"
   let mkstmt q = prepStmt (conn e) q
   ss <- TableStmts <$>
-           mkstmt ("INSERT OR REPLACE INTO " <> tn <> " VALUES (?,?)") <*>
-           mkstmt ("INSERT INTO " <> tn <> " VALUES (?,?)") <*>
-           mkstmt ("REPLACE INTO " <> tn <> " VALUES (?,?)") <*>
-           mkstmt ("SELECT VALUE FROM " <> tn <> " WHERE KEY = ?")
+           mkstmt ("INSERT OR REPLACE INTO  VALUES (?,?)") <*>
+           mkstmt ("INSERT INTO  VALUES (?,?)") <*>
+           mkstmt ("REPLACE INTO  VALUES (?,?)") <*>
+           mkstmt ("SELECT VALUE FROM WHERE KEY = ?")
   return $ e { tableStmts = M.insert tn ss (tableStmts e) }
 
 
@@ -157,11 +156,12 @@ queryKeys' t kq e = do
   mapM (expectSing "field" >=> outFun (kTys t)) rs
 
 doQuery :: Table k -> Maybe (KeyQuery k) -> Utf8 -> [RType] -> SQLite -> IO [[SType]]
-doQuery t kq cols outParams e = do
-  let (whereQ,inParams) = second (map (inFun (kTys t))) $ compileQuery "key" kq
-      sql = "SELECT " <> cols <> " FROM " <> tableName t <> " " <> whereQ <> " ORDER BY key"
-  -- log e (show sql)
-  qry (conn e) sql inParams outParams
+-- doQuery t kq cols outParams e = do
+--   let (whereQ,inParams) = second (map (inFun (kTys t))) $ compileQuery "key" kq
+--       sql = "SELECT " <> cols <> " FROM " <> tableName t <> " " <> whereQ <> " ORDER BY key"
+--   -- log e (show sql)
+--   qry (conn e) sql inParams outParams
+doQuery _ _ _ _ _ = undefined
 
 getStmts :: SQLite -> Table k -> IO TableStmts
 getStmts e t = case M.lookup (tableName t) (tableStmts e) of
