@@ -1,16 +1,11 @@
 ;;
-;; RealEstate contract model, version III.
+;; RealEstate contract model, version IV.
 ;;
 
 ;; 问题：直接transfer to address? 内部要维护balance?
 
 
 (defcontract realestateContract admin-address
-
-  ;;(defevent transfer-event [^address from ^address to ^string token-id])
-
-  ;; need get-accounts
-
 
   ;; ==== real estate table ====
   (defrecord realestate
@@ -36,7 +31,8 @@
 
   ;; ==== stake holder table ====
   (defrecord stakeholder
-      [^address holder
+      [^adress token-id
+       ^address holder
        ^decimal shares])
 
   (deftable stakeholder-table ^{stakeholder}) ;; key: ^string (hash token-id holder)
@@ -149,11 +145,13 @@
     (update realestate-table token-id
             {:buy-price buy-price :sell-price sell-price}))
 
-  (defn- upsert-add [table key field amount]
-    (with-default-read table key {field -1} {old-amount field}
-      (if (= -1 old-amount)
-        (insert table key {field amount})
-        (update table key {field (+ amount old-amount)}))))
+  (defn- upsert-add-stakeholder-table [key field amount k1 v1 k2 v2]
+    (with-default-read stakeholder-table key {field 0} {old-amount field}
+      (write table key {field (+ amount old-amount) k1 v1 k2 v2})))
+
+  (defn- upsert-add-balance-table [key field amount]
+    (with-default-read balance-table key {field 0} {old-amount field}
+      (write table key {field (+ amount old-amount)})))
 
   (defn buy [token-id shares]
     (enforce (>= shares 300) "Invalid Shares")
@@ -167,7 +165,7 @@
             id (hash token-id me)]
         ;; (send owner me cost) ;; send to from value
         (TRANSFER me (CONTRACT-ADDRESS) cost)
-        (upsert-add stakeholder-table id :shares shares)
+        (upsert-add-stakeholder-table id :shares shares :token-id token-id :holder me)
         (update realestate-table token-id {:available-shares (- available-shares shares)}))))
 
   (defn shares-of [token-id]
@@ -185,7 +183,17 @@
          (let [div (* per-share shares)]
            (TRANSFER (CONTRACT-ADDRESS) holder div)
            div)))))
+
+  (defn is-this-token [token-id holder]
+    (with-default-read stakeholder-table (hash token-id holder)
+      {:shares -1}
+      {shares :shares}
+      (not= shares -1)))
   
+  (defn get-accounts [token-id]
+    (filter (is-this-token token-id)
+     (select stakeholder-table ['holder])))
+
   (defn dividend [token-id per-share]
     (with-read realestate-table token-id
       {available-shares :available-shares total-shares :total-shares owner :owner}
@@ -216,7 +224,7 @@
     [token-id amount]
     (let [me (MSG_SENDER)
           id (hash token-id me)]
-      (upsert-add balance-table id :amount amount))))
+      (upsert-add-balance-table id :amount amount))))
 
 
 (let [token-id (new "001" "my token" "SPV" "owner1" "info")

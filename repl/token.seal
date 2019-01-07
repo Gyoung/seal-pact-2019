@@ -1,0 +1,148 @@
+;;
+;; Token contract model.
+;;
+
+(defcontract tokensContract admin-address
+
+  ;; ==== real estate table ====
+  (defrecord tokens
+      [^string token
+       ^string type
+       ^address owner
+       ^string info
+       ^string sendable
+       ^decimal price
+       ^decimal total-shares
+       ^decimal available-shares])
+
+  (deftable tokens-table ^{tokens}) ;; key: ^string token-id
+
+  (create-table tokens-table)
+
+  ;; ==== stake holder table ====
+  (defrecord stakeholder
+      [^address token-id
+       ^address holder
+       ^decimal shares  ;; or credits
+       ])
+
+  (deftable stakeholder-table ^{stakeholder}) ;; key: ^string (hash token-id holder)
+
+  (create-table stakeholder-table)
+
+  (defn new
+    [token-id token type owner info sendable]
+    (let [me (MSG_SENDER)]
+      (enforce (= admin-address me) "need admin")
+      (insert tokens-table token-id
+              {:token            token
+               :type             type
+               :owner            owner
+               :info             info
+               :sendable         sendable
+               :price            0
+               :total-shares     0
+               :available-shares 0})))
+
+  (defn issue
+    [token-id total-shares price info]
+    (let [me (MSG_SENDER)]
+      (with-default-read tokens-table token-id
+        {:price -1}
+        {price :price owner :owner}
+        (enforce (= owner me) "need owner")
+        (enforce (not= -1 price) "token-id not exists")
+        (update tokens-table token-id
+                {:total-shares total-shares
+                 :price price
+                 :info info})
+        (insert stakeholder-table (hash token-id me)
+                {:token-id token-id
+                 :shares total-shares
+                 :holder owner}))))
+
+  (defn info
+    [token-id]
+    (with-default-read tokens-table token-id
+      {:info ""}
+      {info :info}
+      info))
+
+  (defn total-shares [token-id]
+    (with-read tokens-table token-id
+      {shares :total-shares}
+      shares))
+  
+  (defn available-shares [token-id]
+    (with-read tokens-table token-id
+      {shares :available-shares}
+      shares))
+
+  (defn shares-of [token-id]
+    (let [me (MSG_SENDER)]
+      (with-read stakeholder-table (hash token-id me)
+        {shares :shares}
+        shares)))
+
+  (defn dividend-one [per-share owner id]
+    (with-default-read stakeholder-table id
+      {:shares -1}
+      {id :id holder :holder shares :shares}
+      (if (not= -1 shares)
+       (if (= id (hash token-id me))
+         (let [div (* per-share shares)]
+           ;; (TRANSFER (CONTRACT-ADDRESS) holder div)
+           (gd-send (MSG_SENDER) holder div)
+           div)))))
+
+  (defn is-this-token [token-id holder]
+    (with-default-read stakeholder-table (hash token-id holder)
+      {:shares -1}
+      {shares :shares}
+      (not= shares -1)))
+  
+  (defn get-accounts [token-id]
+    (filter (is-this-token token-id)
+     (select stakeholder-table ['holder])))
+
+  (defn dividend [token-id per-share]
+    (with-read tokens-table token-id
+      {available-shares :available-shares total-shares :total-shares owner :owner}
+      (let [total (* per-share total-shares)
+            hold (- total (* per-share available-shares))]
+        ;; (enforce (>= (MSG_VALUE) total)) ;; 是否需要验证MSG_VALUE?
+        ;; (gd-send (MSG_SENDER) (CONTRACT-ADDRESS) total)
+        (enforce (= (fold (+) 0
+                          (map (dividend-one per-share owner)
+                               (get-accounts token-id)))
+                    total)))))
+
+  (defn transfer
+    [token-id from to amount]
+    (let [from-id (hash token-id from)
+          to-id (hash token-id to)]
+     (with-default-read stakeholder-table from-id
+       {:shares -1}
+       {from-shares :shares}
+       (enforce (>= from-shares amount) "Insufficient shares for transfer")
+       (write stakeholder-table from-id {:shares (- from-shares amount)})
+       (with-default-read stakeholder-table to-id
+         {:shares -1}
+         {to-shares :shares}
+         (if (= to-shares -1)
+           (insert stakeholder-table to-id {:shares to-shares :token-id token-id :holder to})
+           (write stakeholder-table to-id {:shares (+ to-shares amount)}))))))
+
+  (defn send
+    [token-id from to amount]
+    (with-read tokens-table token-id
+      {sendable :sendable owner :owner}
+      (if (= sendable "true")
+        (transfer token-id from to amount)
+        ;; else, (= type "CREDITS")
+        (if (or (= owner from)
+                (= owner to))
+          (transfer token-id from to amount)
+          (enforce (= 1 0) "either of 'from' or 'to' must be owner")))))
+
+)
