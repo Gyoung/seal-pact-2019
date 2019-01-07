@@ -1,0 +1,197 @@
+;; token 创建
+;; token创建需要谁签名？？稳定币运营公司？
+;; 参数指定tokenId必须唯一不冲突
+;; 可以指定该通证是否可以自由流转？
+(token.new {:tokenId 001, :token "my token", :type :SPV, :owner "", :info "", :sendable :true})
+
+;; token 开始发行, 注意同一个token可以多次发行，即增发
+;; token发行需要发行人和稳定币运营公司联合签名
+;; 把所有发行的token直接放到owner账户下
+(token.issue tokenId { :totalAmount 10000
+              , :price 100  ;; 默认稳定币计价
+              , :info "该token的发行说明"})
+
+;; token流转
+;; 注意有些通证不允许自由流转
+;; owner可以随意转账，但是普通用户受限
+;; owner发积分给用户，积分发放
+;; 用户可以把token重新转账给owner，积分消费
+;; token回购： 用户-> owner
+(token.send tokenId fromAccount toAccount amount)
+
+;; token分发，用于内部股权赠送，初始股东初始化,可以备注赠送原因（可选）
+;; token分发需要check发行总量？不能超过发行总量？
+;; 该接口同时可以实现用户链上购买token：组合Account转账和该Cmd即可
+;; 需要token owner签名
+;; (token.dispatch tokenId accountId amount info)
+
+;; token销毁，用户发起销毁，本质上是用户消费的行为，需要用户签名
+;; 只有积分类型的token可以销毁，股权token不允许用户单方面销毁
+;; (token.burn tokenId accountId amount info)
+
+;; owner发起，结束发行，取回募集的资金，同时支付一定比例的手续费
+;; 需要owner和稳定币运营公司联合签名
+;; (token.stopIssue tokenId)
+
+;; token回购, 用户发起的token退回，但需要owner签字确认
+;; 回购资金用Account转账
+;; 用于股权型token的回购
+;; (token.return tokenId {:account account1, :amount 100})
+
+;; token分红, owner发起，调用时需要指定转账总金额，函数内部需要校验总金额一致
+;; 直接划转owner账户的稳定币，因此需要owner签名
+;; 直接从ownerAccount账户上扣稳定币，转到持股人账户上
+;; 增加一个native 函数： gd.send(fromAccount, toAccount, amount), 要求fromAccount签名
+(token.dividend tokenId ownerAccount {:per-share 100
+                 :remark "租金收入"})
+
+
+;;
+;; Token contract model.
+;;
+
+(defcontract tokensContract admin-address
+
+  ;; ==== real estate table ====
+  (defrecord tokens
+      [^string token
+       ^string type
+       ^address owner
+       ^string info
+       ^string sendable
+       ^decimal price
+       ^decimal total-shares
+       ^decimal available-shares])
+
+  (deftable tokens-table ^{tokens}) ;; key: ^string token-id
+
+  (create-table tokens-table)
+
+  ;; ==== stake holder table ====
+  (defrecord stakeholder
+      [^address token-id
+       ^address holder
+       ^decimal shares  ;; or credits
+       ])
+
+  (deftable stakeholder-table ^{stakeholder}) ;; key: ^string (hash token-id holder)
+
+  (create-table stakeholder-table)
+
+  (defn new
+    [token-id token type owner info sendable]
+    (let [me (MSG_SENDER)]
+      (enforce (= admin-address me) "need admin")
+      (insert tokens-table token-id
+              {:token            token
+               :type             type
+               :owner            owner
+               :info             info
+               :sendable         sendable
+               :price            0
+               :total-shares     0
+               :available-shares 0})))
+
+  (defn issue
+    [token-id total-shares price info]
+    (let [me (MSG_SENDER)]
+      (with-default-read tokens-table token-id
+        {:price -1}
+        {price :price owner :owner}
+        (enforce (= owner me) "need owner")
+        (enforce (not= -1 price) "token-id not exists")
+        (update tokens-table token-id
+                {:total-shares total-shares
+                 :price price
+                 :info info})
+        (insert stakeholder-table (hash token-id me)
+                {:token-id token-id
+                 :shares total-shares
+                 :holder owner}))))
+
+  (defn info
+    [token-id]
+    (with-default-read tokens-table token-id
+      {:info ""}
+      {info :info}
+      info))
+
+  (defn total-shares [token-id]
+    (with-read tokens-table token-id
+      {shares :total-shares}
+      shares))
+  
+  (defn available-shares [token-id]
+    (with-read tokens-table token-id
+      {shares :available-shares}
+      shares))
+
+  (defn shares-of [token-id]
+    (let [me (MSG_SENDER)]
+      (with-read stakeholder-table (hash token-id me)
+        {shares :shares}
+        shares)))
+
+  (defn dividend-one [per-share owner id]
+    (with-default-read stakeholder-table id
+      {:shares -1}
+      {id :id holder :holder shares :shares}
+      (if (not= -1 shares)
+       (if (= id (hash token-id me))
+         (let [div (* per-share shares)]
+           ;; (TRANSFER (CONTRACT-ADDRESS) holder div)
+           (gd-send (MSG_SENDER) holder div)
+           div)))))
+
+  (defn is-this-token [token-id holder]
+    (with-default-read stakeholder-table (hash token-id holder)
+      {:shares -1}
+      {shares :shares}
+      (not= shares -1)))
+  
+  (defn get-accounts [token-id]
+    (filter (is-this-token token-id)
+     (select stakeholder-table ['holder])))
+
+  (defn dividend [token-id per-share]
+    (with-read tokens-table token-id
+      {available-shares :available-shares total-shares :total-shares owner :owner}
+      (let [total (* per-share total-shares)
+            hold (- total (* per-share available-shares))]
+        ;; (enforce (>= (MSG_VALUE) total)) ;; 是否需要验证MSG_VALUE?
+        ;; (gd-send (MSG_SENDER) (CONTRACT-ADDRESS) total)
+        (enforce (= (fold (+) 0
+                          (map (dividend-one per-share owner)
+                               (get-accounts token-id)))
+                    total)))))
+
+  (defn transfer
+    [token-id from to amount]
+    (let [from-id (hash token-id from)
+          to-id (hash token-id to)]
+     (with-default-read stakeholder-table from-id
+       {:shares -1}
+       {from-shares :shares}
+       (enforce (>= from-shares amount) "Insufficient shares for transfer")
+       (write stakeholder-table from-id {:shares (- from-shares amount)})
+       (with-default-read stakeholder-table to-id
+         {:shares 0}
+         {to-shares :shares}
+         (write stakeholder-table to-id {:shares (+ to-shares amount)})))))
+
+  (defn send
+    [token-id from to amount]
+    (with-read tokens-table token-id
+      {type :type owner :owner}
+      (if (= type "SPV")
+        (transfer token-id from to amount)
+        ;; else, (= type "CREDITS")
+        (if (or (= owner from)
+                (= owner to))
+          (transfer token-id from to amount)
+          (enforce (= 1 0) "either of 'from' or 'to' must be owner")))))
+
+)
+
+
+
