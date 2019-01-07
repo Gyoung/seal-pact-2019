@@ -31,8 +31,10 @@ import Data.Default
 import Seal.DB.MerklePatricia
 import Data.ByteString (ByteString)
 import qualified Data.Map.Strict as M
+-- import qualified Data.ByteString.Char8 as B
 import Pact.Types.Hash
 import Control.Concurrent (threadDelay)
+import Universum ((<>))
 
 
 
@@ -65,33 +67,29 @@ initSealPactService verbose mpdb = do
       }
     -- 初始化内置合约
     result <- execSealPactCommand handler initSealContract
-    klog $ show result
+    klog $ "inside:" ++ show result
     -- _ <- _applyCmd initSealContract
     return handler
     
 
 
 -- 初始化内置合约
-initSealContract :: Command ByteString
-initSealContract = Command {
-    _cmdPayload = sealContract
-   ,_cmdSigs    = []
-   ,_cmdHash    = hash "123"
-}
+initSealContract ::  (Command ByteString)
+initSealContract =
+     Command {
+            _cmdPayload = contract
+           ,_cmdSigs    = ["7d0c9ba189927df85c8c54f8b5c8acd76c1d27e923abbf25a957afdf25550804"]
+           ,_cmdHash    = hash contract }
+
+contract :: ByteString
+contract = "{\"address\":null,\"payload\":{\"exec\":{\"data\":{\"admin-keyset\":[\"7d0c9ba189927df85c8c54f8b5c8acd76c1d27e923abbf25a957afdf25550804\"]},\"code\":\"" 
+    <> sealContract <> "\"}},\"nonce\":\"\\\"step03\\\"\"}"
+
 
 
 sealContract :: ByteString
 sealContract = 
-  "(env-data {\"admin-keyset\" { \"keys\" [\"mockAdminKey\"]} } ) \n\
-  \(env-keys [\"mockAdminKey\"]) \n\
-  \(define-keyset 'admin-keyset (read-keyset \"admin-keyset\")) \n\
-  \(defcontract helloWorld 'admin-keyset \n\
-  \\"A smart contract to greet the world.\" \n\
-  \(defn hello [name] \n\
-  \\"Do the hello-world dance\" \n\
-  \(format \"Hello {}!\" [name]))) \n\
-  \(hello \"world\") \n\
-  \\n"
+     "(define-keyset 'admin-keyset (read-keyset \\\"admin-keyset\\\"))\\n(defcontract helloWorld 'admin-keyset\\n\\\"A smart contract to greet the world.\\\"\\n(defn hello [name]\\n\\\"Do the hello-world dance\\\"\\n(format \\\"Hello {}!\\\" [name])))"
 
 -- 调用合约 如何拿到环境变量db,内置合约?
 execSealPactCommand :: CommandExecHandler -> Command ByteString -> IO CommandResult

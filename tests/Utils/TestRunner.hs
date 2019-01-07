@@ -3,6 +3,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 
 module Utils.TestRunner
   ( ApiResultCheck (..)
@@ -42,6 +44,7 @@ import Network.Wreq
 import System.Directory
 import System.Timeout
 import NeatInterpolation (text)
+import Pact.Types.Term
 
 testDir, _testLogDir, _testConfigFilePath, _testPort, _serverPath :: String
 testDir = "tests/"
@@ -144,7 +147,7 @@ genKeys = do
   g :: SystemRandom <- newGenIO
   case generateKeyPair g of
     Left _ -> error "Something went wrong in genKeys"
-    Right (s,p,_) -> return $ KeyPair s p
+    Right (s,_,_) -> return $ KeyPair s (PublicKey "test")
 
 
 
