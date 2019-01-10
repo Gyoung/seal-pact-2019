@@ -21,7 +21,9 @@ import Pact.Native.Internal
 import Pact.Types.Runtime
 import Universum ((<>))
 import Data.Set (member)
-import qualified Data.ByteString.Char8 as BS
+-- import qualified Data.ByteString.Char8 as BS
+import Data.Text.Encoding (encodeUtf8)
+
 
 
 readKeysetDef :: NativeDef
@@ -98,7 +100,7 @@ enforceKeyset' i _as = argsError i []
 
 enforceKey' :: RNativeFun e
 enforceKey' i [TLitString key] = do
-  let pk = PublicKey $ BS.pack $ show key
+  let pk = PublicKey $ encodeUtf8 key
   sigs <- view eeMsgSigs
   if (member pk sigs) 
     then return $ toTerm True
